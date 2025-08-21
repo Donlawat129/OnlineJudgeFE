@@ -143,7 +143,7 @@
               </el-button>
               <el-row :gutter="20">
                 <el-col :span="12">
-                  <el-form-item :label="$t('m.Input_Samples')">
+                  <el-form-item :label="$t('m.Input_Samples')" :rules="[]">
                     <el-input
                       :rows="5"
                       type="textarea"
@@ -153,7 +153,7 @@
                   </el-form-item>
                 </el-col>
                 <el-col :span="12">
-                  <el-form-item :label="$t('m.Output_Samples')">
+                  <el-form-item :label="$t('m.Output_Samples')" :rules="[]">
                     <el-input
                       :rows="5"
                       type="textarea"
