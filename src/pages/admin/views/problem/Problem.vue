@@ -77,16 +77,34 @@
           </el-col>
           <el-col :span="8">
             <el-form-item :label="$t('m.Tag')" :error="error.tags" required>
+              <!-- แสดง Tags ที่เลือกแล้ว -->
               <span class="tags">
                 <el-tag
                   v-for="tag in problem.tags"
+                  :key="tag"
                   :closable="true"
                   :close-transition="false"
-                  :key="tag"
                   type="success"
                   @close="closeTag(tag)"
                 >{{tag}}</el-tag>
               </span>
+
+              <!-- ส่วนแสดง Available Tags -->
+              <div class="available-tags-section" v-if="!inputVisible && availableTags.length > 0">
+                <div class="available-tags-label">Available Tags:</div>
+                <div class="available-tags">
+                  <el-tag
+                    v-for="tag in availableTags"
+                    :key="`available-${tag}`"
+                    class="available-tag"
+                    type="info"
+                    size="small"
+                    @click="selectAvailableTag(tag)"
+                  >{{tag}}</el-tag>
+                </div>
+              </div>
+
+              <!-- ช่อง input สำหรับการเลือก Tag ที่มีอยู่ -->
               <el-autocomplete
                 v-if="inputVisible"
                 size="mini"
@@ -96,10 +114,15 @@
                 :trigger-on-focus="false"
                 @keyup.enter.native="addTag"
                 @select="addTag"
-                :fetch-suggestions="querySearch">
+                :fetch-suggestions="querySearch"
+                @blur="handleInputBlur"
+              >
               </el-autocomplete>
+
+              <!-- ปุ่ม + New Tag -->
               <el-button class="button-new-tag" v-else size="small" @click="inputVisible = true">+ {{$t('m.New_Tag')}}</el-button>
             </el-form-item>
+
           </el-col>
           <el-col :span="8">
             <el-form-item :label="$t('m.Languages')" :error="error.languages" required>
@@ -306,12 +329,19 @@
         spjMode: '',
         disableRuleType: false,
         routeName: '',
+        allTags: [], // เพิ่ม array สำหรับเก็บ tags ทั้งหมด
         error: {
           tags: '',
           spj: '',
           languages: '',
-          testCase: ''
+          testcase: '' // แก้ไข testCase เป็น testcase ให้ตรงกับโค้ดเดิม
         }
+      }
+    },
+    computed: {
+      // คำนวณ tags ที่สามารถเลือกได้ (ยังไม่ได้เลือก)
+      availableTags() {
+        return this.allTags.filter(tag => !this.problem.tags.includes(tag))
       }
     },
     mounted () {
@@ -321,6 +351,10 @@
       } else {
         this.mode = 'add'
       }
+      
+      // โหลด tags ทั้งหมดเมื่อเริ่มต้น
+      this.loadAllTags()
+      
       api.getLanguages().then(res => {
         this.problem = this.reProblem = {
           _id: '',
@@ -416,6 +450,29 @@
       }
     },
     methods: {
+      // โหลด tags ทั้งหมดจาก API
+      loadAllTags() {
+        api.getProblemTagList({ keyword: '' }).then(res => {
+          this.allTags = res.data.data.map(tag => tag.name)
+        }).catch(() => {
+          this.allTags = []
+        })
+      },
+      
+      // เลือก tag จาก available tags
+      selectAvailableTag(tag) {
+        if (!this.problem.tags.includes(tag)) {
+          this.problem.tags.push(tag)
+        }
+      },
+      
+      // จัดการเมื่อ input blur
+      handleInputBlur() {
+        if (!this.tagInput.trim()) {
+          this.inputVisible = false
+        }
+      },
+      
       switchSpj () {
         if (this.testCaseUploaded) {
           this.$confirm('If you change problem judge method, you need to re-upload test cases', 'Warning', {
@@ -446,10 +503,14 @@
         this.problem.test_case_score = []
         this.problem.test_case_id = ''
       },
-      addTag () {
-        let inputValue = this.tagInput
-        if (inputValue) {
+      addTag (item) {
+        let inputValue = typeof item === 'string' ? item : (item && item.value ? item.value : this.tagInput)
+        if (inputValue && !this.problem.tags.includes(inputValue)) {
           this.problem.tags.push(inputValue)
+          // เพิ่ม tag ใหม่เข้าไปใน allTags ถ้ายังไม่มี
+          if (!this.allTags.includes(inputValue)) {
+            this.allTags.push(inputValue)
+          }
         }
         this.inputVisible = false
         this.tagInput = ''
@@ -541,8 +602,8 @@
           return
         }
         if (!this.testCaseUploaded) {
-          this.error.testCase = 'Test case is not uploaded yet'
-          this.$error(this.error.testCase)
+          this.error.testcase = 'Test case is not uploaded yet'
+          this.$error(this.error.testcase)
           return
         }
         if (this.problem.rule_type === 'OI') {
@@ -611,7 +672,47 @@
     .tags {
       .el-tag {
         margin-right: 10px;
+        margin-bottom: 5px;
       }
+    }
+    
+    // เพิ่ม styles สำหรับ available tags
+    .available-tags-section {
+      margin: 10px 0;
+      padding: 10px;
+      background-color: #f9f9f9;
+      border-radius: 4px;
+      border: 1px solid #e4e7ed;
+    }
+    
+    .available-tags-label {
+      font-size: 12px;
+      color: #606266;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    
+    .available-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+    
+    .available-tag {
+      cursor: pointer;
+      transition: all 0.3s;
+      user-select: none;
+      
+      &:hover {
+        background-color: #409eff;
+        border-color: #409eff;
+        color: white;
+        transform: translateY(-1px);
+      }
+    }
+    
+    .accordion {
+      margin-bottom: 10px;
     }
     .accordion {
       margin-bottom: 10px;
@@ -649,4 +750,3 @@
     overflow-x: scroll;
   }
 </style>
-
