@@ -18,19 +18,19 @@
         </el-row>
         <el-row :gutter="20">
           <el-col :span="24">
-            <el-form-item prop="description" :label="$t('m.Description')" required>
+            <el-form-item prop="description" :label="$t('m.Description')">
               <Simditor v-model="problem.description"></Simditor>
             </el-form-item>
           </el-col>
         </el-row>
         <el-row :gutter="20">
           <el-col :span="24">
-            <el-form-item prop="input_description" :label="$t('m.Input_Description')" required>
+            <el-form-item prop="input_description" :label="$t('m.Input_Description')" :rules="[]">
               <Simditor v-model="problem.input_description"></Simditor>
             </el-form-item>
           </el-col>
           <el-col :span="24">
-            <el-form-item prop="output_description" :label="$t('m.Output_Description')" required>
+            <el-form-item prop="output_description" :label="$t('m.Output_Description')" :rules="[]">
               <Simditor v-model="problem.output_description"></Simditor>
             </el-form-item>
           </el-col>
