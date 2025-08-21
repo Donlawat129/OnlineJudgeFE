@@ -569,14 +569,13 @@
         })
       },
       submit () {
-        if (!this.problem.samples.length) {
-          this.$error('Sample is required')
-          return
-        }
-        for (let sample of this.problem.samples) {
-          if (!sample.input || !sample.output) {
-            this.$error('Sample input and output is required')
-            return
+        if (this.problem.samples.some(sample => sample.input || sample.output)) {
+          for (let sample of this.problem.samples) {
+            // ตรวจสอบว่า `input` หรือ `output` มีค่าหรือไม่
+            if ((sample.input && !sample.output) || (!sample.input && sample.output)) {
+              this.$error('Both Sample input and output are required');
+              return;
+            }
           }
         }
         if (!this.problem.tags.length) {
