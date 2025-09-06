@@ -313,6 +313,22 @@
 
       <span slot="footer" class="dialog-footer">
         <cancel @click.native="showGroupDialog = false">Cancel</cancel>
+
+        <!-- [ADD] ลบออกจากกลุ่มที่เลือก -->
+        <el-button type="danger"
+                  :disabled="!groupForm.selected"
+                  :loading="removeSubmitting"
+                  @click="removeFromGroup">
+          Remove from group
+        </el-button>
+
+        <!-- [ADD] ลบออกจากทุกกลุ่ม (มี confirm) -->
+        <el-button type="text"
+                  :loading="clearAllSubmitting"
+                  @click="clearAllGroups">
+          Clear all groups
+        </el-button>
+
         <save @click.native="confirmGroup" :loading="groupSubmitting">Save</save>
       </span>
     </el-dialog>
@@ -361,6 +377,8 @@
         groupSubmitting: false,
         availableGroups: [],
         groupForm: { selected: '', name: '' },
+        removeSubmitting: false,
+        clearAllSubmitting: false,
       }
     },
     mounted () {
@@ -466,7 +484,6 @@
       handleResetData () {
         this.uploadUsers = []
       },
-      // [ADD] เปิด dialog และโหลดรายชื่อกลุ่ม
       openGroupDialog () {
         this.groupForm = { selected: '', name: '' }
         this.showGroupDialog = true
@@ -498,6 +515,46 @@
         }).catch(() => {
           this.groupSubmitting = false
         })
+      },
+      removeFromGroup () {
+        const user_ids = this.selectedUserIDs
+        const group_name = (this.groupForm.selected || '').trim()
+        if (!user_ids.length) return this.$error('Please select at least 1 user')
+        if (!group_name) return this.$error('Please select a group to remove')
+
+        this.$confirm(
+          `Remove ${user_ids.length} user(s) from group "${group_name}" ?`,
+          'Confirm',
+          { type: 'warning' }
+        ).then(() => {
+          this.removeSubmitting = true
+          api.removeUsersFromGroup({ user_ids, group_name })
+            .then(() => {
+              this.removeSubmitting = false
+              this.getUserList(this.currentPage)
+              this.$success('Removed from group')
+            })
+            .catch(() => { this.removeSubmitting = false })
+        }).catch(() => {})
+      },
+      clearAllGroups () {
+        const user_ids = this.selectedUserIDs
+        if (!user_ids.length) return this.$error('Please select at least 1 user')
+
+        this.$confirm(
+          `Remove ${user_ids.length} user(s) from ALL groups?`,
+          'Confirm',
+          { type: 'warning' }
+        ).then(() => {
+          this.clearAllSubmitting = true
+          api.clearUsersGroups({ user_ids })
+            .then(() => {
+              this.clearAllSubmitting = false
+              this.getUserList(this.currentPage)
+              this.$success('Cleared all groups')
+            })
+            .catch(() => { this.clearAllSubmitting = false })
+        }).catch(() => {})
       },
     },
     computed: {

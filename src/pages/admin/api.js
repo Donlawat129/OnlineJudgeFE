@@ -205,6 +205,14 @@ export default {
     // data: { user_ids: [1,2,...], group_name: 'A1' }
     return ajax('admin/groups/assign', 'post', { data })
   },
+  removeUsersFromGroup (data) {
+  // data: { user_ids: [1,2], group_name: 'A1' }
+    return ajax.post('/admin/groups/remove', data)
+  },
+  clearUsersGroups (data) {
+  // data: { user_ids: [1,2] }
+    return ajax.post('/admin/groups/clear', data)
+  },
 }
 
 /**
