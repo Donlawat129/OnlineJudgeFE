@@ -60,7 +60,7 @@ export default {
     return ajax('admin/user', 'put', { data })
   },
   deleteUsers (ids) {
-    return ajax('admin/user', 'delete', { params: { ids } })
+    return ajax('admin/user', 'delete', { params: { id: ids } })
   },
   addUser (data) {
     return ajax('admin/user', 'post', { data })
