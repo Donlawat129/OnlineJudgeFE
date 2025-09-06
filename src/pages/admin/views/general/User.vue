@@ -313,22 +313,20 @@
 
       <span slot="footer" class="dialog-footer">
         <cancel @click.native="showGroupDialog = false">Cancel</cancel>
-
-        <!-- [ADD] ลบออกจากกลุ่มที่เลือก -->
+      
         <el-button type="danger"
-                  :disabled="!groupForm.selected"
-                  :loading="removeSubmitting"
-                  @click="removeFromGroup">
+                   :disabled="!groupForm.selected"
+                   :loading="removeSubmitting"
+                   @click="removeFromGroup">
           Remove from group
         </el-button>
-
-        <!-- [ADD] ลบออกจากทุกกลุ่ม (มี confirm) -->
+      
         <el-button type="text"
-                  :loading="clearAllSubmitting"
-                  @click="clearAllGroups">
+                   :loading="clearAllSubmitting"
+                   @click="clearAllGroups">
           Clear all groups
         </el-button>
-
+      
         <save @click.native="confirmGroup" :loading="groupSubmitting">Save</save>
       </span>
     </el-dialog>
@@ -521,11 +519,10 @@
         const group_name = (this.groupForm.selected || '').trim()
         if (!user_ids.length) return this.$error('Please select at least 1 user')
         if (!group_name) return this.$error('Please select a group to remove')
-
+      
         this.$confirm(
           `Remove ${user_ids.length} user(s) from group "${group_name}" ?`,
-          'Confirm',
-          { type: 'warning' }
+          'Confirm', { type: 'warning' }
         ).then(() => {
           this.removeSubmitting = true
           api.removeUsersFromGroup({ user_ids, group_name })
@@ -537,14 +534,14 @@
             .catch(() => { this.removeSubmitting = false })
         }).catch(() => {})
       },
+      
       clearAllGroups () {
         const user_ids = this.selectedUserIDs
         if (!user_ids.length) return this.$error('Please select at least 1 user')
-
+      
         this.$confirm(
           `Remove ${user_ids.length} user(s) from ALL groups?`,
-          'Confirm',
-          { type: 'warning' }
+          'Confirm', { type: 'warning' }
         ).then(() => {
           this.clearAllSubmitting = true
           api.clearUsersGroups({ user_ids })
@@ -556,7 +553,6 @@
             .catch(() => { this.clearAllSubmitting = false })
         }).catch(() => {})
       },
-    },
     computed: {
       selectedUserIDs () {
         let ids = []
