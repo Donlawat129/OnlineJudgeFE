@@ -24,264 +24,165 @@ export default {
   getProfile () {
     return ajax('profile', 'get')
   },
-  // 获取公告列表
-  getAnnouncementList (offset, limit) {
+  getAnnouncementList (offset, limit, keyword) {
     return ajax('admin/announcement', 'get', {
       params: {
-        paging: true,
         offset,
-        limit
+        limit,
+        keyword
       }
     })
   },
-  // 删除公告
   deleteAnnouncement (id) {
     return ajax('admin/announcement', 'delete', {
-      params: {
-        id
-      }
+      params: { id }
     })
   },
-  // 修改公告
-  updateAnnouncement (data) {
-    return ajax('admin/announcement', 'put', {
-      data
-    })
+  editAnnouncement (data) {
+    return ajax('admin/announcement', 'put', { data })
   },
-  // 添加公告
-  createAnnouncement (data) {
-    return ajax('admin/announcement', 'post', {
-      data
-    })
+  addAnnouncement (data) {
+    return ajax('admin/announcement', 'post', { data })
   },
-  // 获取用户列表
   getUserList (offset, limit, keyword) {
-    let params = {paging: true, offset, limit}
-    if (keyword) {
-      params.keyword = keyword
-    }
     return ajax('admin/user', 'get', {
-      params: params
+      params: {
+        offset,
+        limit,
+        keyword
+      }
     })
   },
-  // 获取单个用户信息
   getUser (id) {
-    return ajax('admin/user', 'get', {
-      params: {
-        id
-      }
-    })
+    return ajax('admin/user', 'get', { params: { id } })
   },
-  // 编辑用户
   editUser (data) {
-    return ajax('admin/user', 'put', {
-      data
-    })
+    return ajax('admin/user', 'put', { data })
   },
-  deleteUsers (id) {
-    return ajax('admin/user', 'delete', {
-      params: {
-        id
-      }
-    })
+  deleteUsers (ids) {
+    return ajax('admin/user', 'delete', { params: { ids } })
   },
-  importUsers (users) {
-    return ajax('admin/user', 'post', {
-      data: {
-        users
-      }
-    })
+  addUser (data) {
+    return ajax('admin/user', 'post', { data })
   },
   generateUser (data) {
-    return ajax('admin/generate_user', 'post', {
-      data
-    })
-  },
-  getLanguages () {
-    return ajax('languages', 'get')
+    return ajax('admin/generate_user', 'post', { data })
   },
   getSMTPConfig () {
     return ajax('admin/smtp', 'get')
   },
-  createSMTPConfig (data) {
-    return ajax('admin/smtp', 'post', {
-      data
-    })
+  addSMTPConfig (data) {
+    return ajax('admin/smtp', 'post', { data })
   },
   editSMTPConfig (data) {
-    return ajax('admin/smtp', 'put', {
-      data
-    })
+    return ajax('admin/smtp', 'put', { data })
   },
-  testSMTPConfig (email) {
-    return ajax('admin/smtp_test', 'post', {
-      data: {
-        email
-      }
-    })
+  testSMTPConfig (data) {
+    return ajax('admin/smtp_test', 'post', { data })
   },
   getWebsiteConfig () {
     return ajax('admin/website', 'get')
   },
   editWebsiteConfig (data) {
-    return ajax('admin/website', 'post', {
-      data
-    })
+    return ajax('admin/website', 'post', { data })
   },
   getJudgeServer () {
     return ajax('admin/judge_server', 'get')
   },
   deleteJudgeServer (hostname) {
-    return ajax('admin/judge_server', 'delete', {
-      params: {
-        hostname: hostname
-      }
-    })
-  },
-  updateJudgeServer (data) {
-    return ajax('admin/judge_server', 'put', {
-      data
-    })
-  },
-  getInvalidTestCaseList () {
-    return ajax('admin/prune_test_case', 'get')
-  },
-  pruneTestCase (id) {
-    return ajax('admin/prune_test_case', 'delete', {
-      params: {
-        id
-      }
-    })
-  },
-  createContest (data) {
-    return ajax('admin/contest', 'post', {
-      data
-    })
-  },
-  getContest (id) {
-    return ajax('admin/contest', 'get', {
-      params: {
-        id
-      }
-    })
-  },
-  editContest (data) {
-    return ajax('admin/contest', 'put', {
-      data
-    })
+    return ajax('admin/judge_server', 'delete', { params: { hostname } })
   },
   getContestList (offset, limit, keyword) {
-    let params = {paging: true, offset, limit}
-    if (keyword) {
-      params.keyword = keyword
+    return ajax('admin/contest', 'get', { params: { offset, limit, keyword } })
+  },
+  addContest (data) {
+    return ajax('admin/contest', 'post', { data })
+  },
+  getContest (id) {
+    return ajax('admin/contest', 'get', { params: { id } })
+  },
+  editContest (data) {
+    return ajax('admin/contest', 'put', { data })
+  },
+  deleteContest (id) {
+    return ajax('admin/contest', 'delete', { params: { id } })
+  },
+  // 导入用户
+  importUsers (users) {
+    let data = []
+    for (let user of users) {
+      data.push({
+        username: user[0],
+        real_name: user[1],
+        email: user[2],
+        password: user[3]
+      })
     }
-    return ajax('admin/contest', 'get', {
-      params: params
+    return ajax('admin/import_user', 'post', { data: { users: data } })
+  },
+  downloadTestCase (id) {
+    return ajax('admin/test_case', 'get', {
+      params: { id },
+      responseType: 'blob'
     })
   },
-  getContestAnnouncementList (contestID) {
-    return ajax('admin/contest/announcement', 'get', {
-      params: {
-        contest_id: contestID
-      }
-    })
+  getLanguages () {
+    return ajax('languages', 'get')
   },
-  createContestAnnouncement (data) {
-    return ajax('admin/contest/announcement', 'post', {
-      data
-    })
+  getProblemTagList () {
+    return ajax('problem/tags', 'get')
   },
-  deleteContestAnnouncement (id) {
-    return ajax('admin/contest/announcement', 'delete', {
-      params: {
-        id
-      }
-    })
+  addProblemTag (tag_name) {
+    return ajax('problem/tags', 'post', { data: { tag_name } })
   },
-  updateContestAnnouncement (data) {
-    return ajax('admin/contest/announcement', 'put', {
-      data
-    })
+  deleteProblemTag (tag_name) {
+    return ajax('problem/tags', 'delete', { params: { tag_name } })
   },
-  getProblemTagList (params) {
-    return ajax('problem/tags', 'get', {
-      params
-    })
+  makeProblemPublic (id) {
+    return ajax('admin/problem/make_public', 'post', { data: { id } })
   },
-  compileSPJ (data) {
-    return ajax('admin/compile_spj', 'post', {
-      data
-    })
+  addProblem (data) {
+    return ajax('admin/problem', 'post', { data })
   },
-  createProblem (data) {
-    return ajax('admin/problem', 'post', {
-      data
-    })
-  },
+  // 修改problem
   editProblem (data) {
-    return ajax('admin/problem', 'put', {
-      data
-    })
-  },
-  deleteProblem (id) {
-    return ajax('admin/problem', 'delete', {
-      params: {
-        id
-      }
-    })
+    return ajax('admin/problem', 'put', { data })
   },
   getProblem (id) {
+    return ajax('admin/problem', 'get', { params: { id } })
+  },
+  deleteProblem (id) {
+    return ajax('admin/problem', 'delete', { params: { id } })
+  },
+  getProblemList (offset, limit, keyword, tag) {
     return ajax('admin/problem', 'get', {
-      params: {
-        id
-      }
+      params: { offset, limit, keyword, tag }
     })
   },
-  getProblemList (params) {
-    params = utils.filterEmptyValue(params)
-    return ajax('admin/problem', 'get', {
-      params
-    })
-  },
-  getContestProblemList (params) {
-    params = utils.filterEmptyValue(params)
+  getContestProblem (problem_id, contest_id) {
     return ajax('admin/contest/problem', 'get', {
-      params
+      params: { problem_id, contest_id }
     })
   },
-  getContestProblem (id) {
+  getContestProblemList (contest_id, page, limit) {
     return ajax('admin/contest/problem', 'get', {
-      params: {
-        id
-      }
+      params: { contest_id, page, limit }
     })
   },
-  createContestProblem (data) {
-    return ajax('admin/contest/problem', 'post', {
-      data
-    })
+  addContestProblem (data) {
+    return ajax('admin/contest/problem', 'post', { data })
   },
   editContestProblem (data) {
-    return ajax('admin/contest/problem', 'put', {
-      data
-    })
+    return ajax('admin/contest/problem', 'put', { data })
   },
   deleteContestProblem (id) {
-    return ajax('admin/contest/problem', 'delete', {
-      params: {
-        id
-      }
-    })
+    return ajax('admin/contest/problem', 'delete', { params: { id } })
   },
   makeContestProblemPublic (data) {
-    return ajax('admin/contest_problem/make_public', 'post', {
-      data
-    })
+    return ajax('admin/contest_problem/make_public', 'post', { data })
   },
   addProblemFromPublic (data) {
-    return ajax('admin/contest/add_problem_from_public', 'post', {
-      data
-    })
+    return ajax('admin/contest/add_problem_from_public', 'post', { data })
   },
   getReleaseNotes () {
     return ajax('admin/versions', 'get')
@@ -296,7 +197,14 @@ export default {
     return ajax('export_problem', 'post', {
       data
     })
-  }
+  },
+  getGroupList () {
+    return ajax('admin/groups', 'get')
+  },
+  assignUsersToGroup (data) {
+    // data: { user_ids: [1,2,...], group_name: 'A1' }
+    return ajax('admin/groups/assign', 'post', { data })
+  },
 }
 
 /**
@@ -306,26 +214,44 @@ export default {
  * @param data post data, use for method put|post
  * @returns {Promise}
  */
-function ajax (url, method, options) {
-  if (options !== undefined) {
-    var {params = {}, data = {}} = options
-  } else {
-    params = data = {}
-  }
+function ajax (url, method = 'get', {params, data, headers = {}} = {}) {
   return new Promise((resolve, reject) => {
-    axios({
+    method = method.toLowerCase()
+    let options = {
       url,
       method,
-      params,
-      data
-    }).then(res => {
-      // API正常返回(status=20x), 是否错误通过有无error判断
-      if (res.data.error !== null) {
-        Vue.prototype.$error(res.data.data)
+      headers,
+      validateStatus: function (status) {
+        return status >= 200 && status < 500
+      }
+    }
+
+    if (method === 'get') {
+      options.params = params
+    } else {
+      options.data = data
+    }
+
+    axios(options).then(res => {
+      if (res.status === 403) {
+        Vue.prototype.$error('403: Forbidden. You are not authorized to access this resource.')
+      }
+      if (res.status === 401) {
+        // 登录失败
+        // 使用Promise.resolve / reject而不是then方法，确保任务在queue中按顺序执行
+        // 这里的closeAll解决登录失败时不断弹出失败alert的bug
+        Vue.prototype.$closeAll()
+        Vue.prototype.$alert(res.data.data, 'Login failure', {
+          type: 'error'
+        }).then(() => {
+          router.push({ name: 'login' })
+        })
         reject(res)
-        // // 若后端返回为登录，则为session失效，应退出当前登录用户
-        if (res.data.data.startsWith('Please login')) {
-          router.push({name: 'login'})
+      } else if (res.status !== 200) {
+        reject(res)
+        // 接口请求返回失败
+        if (res.data && res.data.data) {
+          Vue.prototype.$error(res.data.data)
         }
       } else {
         resolve(res)
