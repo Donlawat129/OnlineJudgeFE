@@ -17,7 +17,7 @@
             <el-button 
               type="warning" 
               icon="el-icon-fa-trash" 
-              @click="deleteUsers(selectedUserIDs)"
+              @click="deleteUsers(selectedUserIDs.join(','))"
               size="small"
               class="action-button"
             >
