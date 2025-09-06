@@ -207,11 +207,11 @@ export default {
   },
   removeUsersFromGroup (data) {
   // data: { user_ids: [1,2], group_name: 'A1' }
-    return ajax.post('/admin/groups/remove', data)
+    return ajax('admin/groups/remove', 'post', { data })
   },
   clearUsersGroups (data) {
   // data: { user_ids: [1,2] }
-    return ajax.post('/admin/groups/clear', data)
+    return ajax('admin/groups/clear', 'post', { data })
   },
 }
 
