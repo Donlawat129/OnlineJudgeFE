@@ -2,25 +2,41 @@
   <div class="view">
     <Panel :title="$t('m.User_User') ">
       <div slot="header">
-        <el-row :gutter="20">
-          <el-col :span="8">
-            <el-button v-show="selectedUsers.length"
-                       type="warning" icon="el-icon-fa-trash"
-                       @click="deleteUsers(selectedUserIDs)">Delete
-            </el-button>
-            <el-button
-              v-show="selectedUsers.length"
-              type="primary"
-              icon="el-icon-fa-users"
+        <div class="header-container">
+          <!-- ส่วนปุ่มกลุ่ม -->
+          <div class="bulk-actions-section" v-show="selectedUsers.length">
+            <el-button 
+              type="primary" 
+              icon="el-icon-fa-users" 
               @click="openGroupDialog"
-              style="margin-left:8px"
-            >Group</el-button>
-          </el-col>
-          <el-col :span="selectedUsers.length ? 16: 24">
-            <el-input v-model="keyword" prefix-icon="el-icon-search" placeholder="Keywords"></el-input>
-          </el-col>
-        </el-row>
+              size="small"
+              class="action-button"
+            >
+              Group
+            </el-button>
+            <el-button 
+              type="warning" 
+              icon="el-icon-fa-trash" 
+              @click="deleteUsers(selectedUserIDs)"
+              size="small"
+              class="action-button"
+            >
+              Delete
+            </el-button>
+          </div>
+          
+          <!-- ส่วนช่องค้นหา -->
+          <div class="search-section" :class="{ 'with-buttons': selectedUsers.length }">
+            <el-input 
+              v-model="keyword" 
+              prefix-icon="el-icon-search" 
+              placeholder="Keywords"
+              clearable
+            />
+          </div>
+        </div>
       </div>
+
       <el-table
         v-loading="loadingTable"
         element-loading-text="loading"
@@ -32,122 +48,162 @@
 
         <el-table-column prop="id" label="ID"></el-table-column>
 
-        <el-table-column prop="real_name" :label="$t('m.User_Real_Name')"></el-table-column>
+        <el-table-column prop="username" label="Username"></el-table-column>
 
-        <el-table-column prop="username" :label="$t('m.User_Username')"></el-table-column>
+        <el-table-column prop="create_time" label="Create Time">
+          <template slot-scope="scope">
+            {{scope.row.create_time | localtime }}
+          </template>
+        </el-table-column>
 
-        <el-table-column prop="email" :label="$t('m.User_Email')"></el-table-column>
+        <el-table-column prop="last_login" label="Last Login">
+          <template slot-scope="scope">
+            {{scope.row.last_login | localtime }}
+          </template>
+        </el-table-column>
 
-        <el-table-column prop="create_time" :label="$t('m.User_Create_Time')"></el-table-column>
+        <el-table-column prop="real_name" label="Real Name"></el-table-column>
 
-        <el-table-column prop="last_login" label="Last Login"></el-table-column>
+        <el-table-column prop="email" label="Email"></el-table-column>
 
-        <el-table-column :label="$t('m.User_Action')">
+        <el-table-column prop="admin_type" label="User Type">
+          <template slot-scope="scope">
+            {{ scope.row.admin_type }}
+          </template>
+        </el-table-column>
+
+        <el-table-column label="Group">
+          <template slot-scope="scope">
+            <template v-if="scope.row.groups && scope.row.groups.length">
+              <el-tag v-for="(g, i) in scope.row.groups"
+                      :key="g + i"
+                      size="mini"
+                      style="margin-right:4px">
+                {{ g }}
+              </el-tag>
+            </template>
+            <span v-else>—</span>
+          </template>
+        </el-table-column>
+
+        <el-table-column fixed="right" label="Option" width="200">
           <template slot-scope="{row}">
-            <el-button type="primary" @click="openUserDialog(row.id)" icon="el-icon-fa-pencil" size="small">Edit</el-button>
-            <el-button type="warning" @click="resetPassword(row.id)" icon="el-icon-fa-undo" size="small">Reset Password</el-button>
-            <el-button type="danger" @click="deleteUsers([row.id])" icon="el-icon-fa-trash" size="small">Delete</el-button>
+            <icon-btn name="Edit" icon="edit" @click.native="openUserDialog(row.id)"></icon-btn>
+            <icon-btn name="Delete" icon="trash" @click.native="deleteUsers([row.id])"></icon-btn>
           </template>
         </el-table-column>
       </el-table>
-      <div style="text-align:center;margin: 20px auto;">
+      <div class="panel-options">
         <el-pagination
-          layout="prev, pager, next, jumper, sizes"
+          class="page"
+          layout="prev, pager, next"
           @current-change="currentChange"
-          @size-change="(size) => {pageSize = size; currentChange(1)}"
-          :page-sizes="[10, 20, 30, 50]"
-          :total="total"></el-pagination>
+          :page-size="pageSize"
+          :total="total">
+        </el-pagination>
       </div>
     </Panel>
 
-    <Panel :title="$t('m.User_Generate_User')" icon="el-icon-fa-users" style="margin-top: 20px;">
-      <el-form ref="formGenerateUser" :model="formGenerateUser" label-width="120px" label-position="left">
-        <el-form-item :label="$t('m.User_Prefix')" :rules="{ required: true, message: 'Prefix is required'}">
-          <el-input v-model="formGenerateUser.prefix" placeholder="u"></el-input>
-        </el-form-item>
-        <el-form-item :label="$t('m.User_Suffix')">
-          <el-input v-model="formGenerateUser.suffix" placeholder="_student"></el-input>
-        </el-form-item>
-        <el-form-item :label="$t('m.User_From')" :rules="{ required: true, message: 'From is required'}">
-          <el-input-number v-model="formGenerateUser.number_from" :min="0"></el-input-number>
-        </el-form-item>
-        <el-form-item :label="$t('m.User_To')" :rules="{ required: true, message: 'To is required'}">
-          <el-input-number v-model="formGenerateUser.number_to" :min="0"></el-input-number>
-        </el-form-item>
-        <el-form-item :label="$t('m.User_Password_Length')" :rules="{ required: true, message: 'Password length is required'}">
-          <el-input-number v-model="formGenerateUser.password_length" :min="4" :max="20"></el-input-number>
-        </el-form-item>
-        <el-form-item :label="$t('m.User_CSV')" :rules="{ required: true, message: 'CSV file is required'}">
-          <span style="display:inline-flex; align-items:center;">
-            <el-popover
-              placement="right"
-              title="CSV Format"
-              width="340"
-              trigger="hover"
-            >
-              <div class="notification">
-                <p>CSV columns: <strong>username, real_name, email, password</strong></p>
-                <p>Example:</p>
-                <pre>alice,Alice,alice@example.com,pass1234
-bob,Bob,bob@example.com,pass5678</pre>
-                <p>Empty rows will be filtered.</p>
-              </div>
-              <i slot="reference" class="el-icon-fa-question-circle import-user-icon"></i>
-            </el-popover>
-          </span>
-          <el-upload v-if="!uploadUsers.length"
-                     action=""
-                     :show-file-list="false"
-                     accept=".csv"
-                     :before-upload="handleUsersCSV">
-            <el-button size="small" icon="el-icon-fa-upload" type="primary">Choose File</el-button>
-          </el-upload>
-          <template v-else>
-            <el-table :data="uploadUsersPage">
-              <el-table-column label="Username">
-                <template slot-scope="{row}">
-                  {{row[0]}}
-                </template>
-              </el-table-column>
-              <el-table-column label="Real Name">
-                <template slot-scope="{row}">
-                  {{row[1]}}
-                </template>
-              </el-table-column>
-              <el-table-column label="Email">
-                <template slot-scope="{row}">
-                  {{row[2]}}
-                </template>
-              </el-table-column>
-              <el-table-column label="Password">
-                <template slot-scope="{row}">
-                  {{row[3]}}
-                </template>
-              </el-table-column>
-            </el-table>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
-              <div>Rows: {{ uploadUsers.length }}</div>
-              <el-pagination
-                :current-page.sync="uploadUsersCurrentPage"
-                layout="prev, pager, next, jumper"
-                :page-size="uploadUsersPageSize"
-                :total="uploadUsers.length">
-              </el-pagination>
-            </div>
-            <div style="margin-top:8px;">
-              <el-button type="primary" :loading="loadingGenerate" @click="handleUsersUpload">Import</el-button>
-              <el-button @click="handleResetData">Reset</el-button>
-            </div>
-          </template>
-        </el-form-item>
-        <el-form-item :label="$t('m.User_Download_Format')">
-          <span>
-            <a href="/admin/generate_user?file_id=0" target="_blank">Click to download</a>
-            &nbsp;file preview: 
-            <span class="userPreview">
-              {{formGenerateUser.prefix}}{{formGenerateUser.number_from}}{{formGenerateUser.suffix}},
-              {{formGenerateUser.prefix}}{{formGenerateUser.number_from + 1}}{{formGenerateUser.suffix}},
-              {{formGenerateUser.prefix}}...{{formGenerateUser.number_to}}{{formGenerateUser.suffix}}
+    <Panel>
+      <span slot="title">{{$t('m.Import_User')}}
+        <el-popover placement="right" trigger="hover">
+          <p>Only support csv file without headers, check the <a
+            href="http://docs.onlinejudge.me/#/onlinejudge/guide/import_users">link</a> for details</p>
+          <i slot="reference" class="el-icon-fa-question-circle import-user-icon"></i>
+        </el-popover>
+      </span>
+      <el-upload v-if="!uploadUsers.length"
+                 action=""
+                 :show-file-list="false"
+                 accept=".csv"
+                 :before-upload="handleUsersCSV">
+        <el-button size="small" icon="el-icon-fa-upload" type="primary">Choose File</el-button>
+      </el-upload>
+      <template v-else>
+        <el-table :data="uploadUsersPage">
+          <el-table-column label="Username">
+            <template slot-scope="{row}">
+              {{row[0]}}
+            </template>
+          </el-table-column>
+          <el-table-column label="Password">
+            <template slot-scope="{row}">
+              {{row[1]}}
+            </template>
+          </el-table-column>
+          <el-table-column label="Email">
+            <template slot-scope="{row}">
+              {{row[2]}}
+            </template>
+          </el-table-column>
+          <el-table-column label="RealName">
+            <template slot-scope="{row}">
+              {{row[3]}}
+            </template>
+          </el-table-column>
+        </el-table>
+        <div class="panel-options">
+          <el-button type="primary" size="small"
+                     icon="el-icon-fa-upload"
+                     @click="handleUsersUpload">Import All
+          </el-button>
+          <el-button type="warning" size="small"
+                     icon="el-icon-fa-undo"
+                     @click="handleResetData">Reset Data
+          </el-button>
+          <el-pagination
+            class="page"
+            layout="prev, pager, next"
+            :page-size="uploadUsersPageSize"
+            :current-page.sync="uploadUsersCurrentPage"
+            :total="uploadUsers.length">
+          </el-pagination>
+        </div>
+      </template>
+    </Panel>
+
+    <Panel :title="$t('m.Generate_User')">
+      <el-form :model="formGenerateUser" ref="formGenerateUser">
+        <el-row type="flex" justify="space-between">
+          <el-col :span="4">
+            <el-form-item label="Prefix" prop="prefix">
+              <el-input v-model="formGenerateUser.prefix" placeholder="Prefix"></el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :span="4">
+            <el-form-item label="Suffix" prop="suffix">
+              <el-input v-model="formGenerateUser.suffix" placeholder="Suffix"></el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :span="4">
+            <el-form-item label="Start Number" prop="number_from" required>
+              <el-input-number v-model="formGenerateUser.number_from" style="width: 100%"></el-input-number>
+            </el-form-item>
+          </el-col>
+          <el-col :span="4">
+            <el-form-item label="End Number" prop="number_to" required>
+              <el-input-number v-model="formGenerateUser.number_to" style="width: 100%"></el-input-number>
+            </el-form-item>
+          </el-col>
+          <el-col :span="4">
+            <el-form-item label="Password Length" prop="password_length" required>
+              <el-input v-model="formGenerateUser.password_length"
+                        placeholder="Password Length"></el-input>
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-form-item>
+          <el-button type="primary" @click="generateUser" icon="el-icon-fa-users" :loading="loadingGenerate">Generate & Export
+          </el-button>
+          <span class="userPreview" v-if="formGenerateUser.number_from && formGenerateUser.number_to &&
+                                          formGenerateUser.number_from <= formGenerateUser.number_to">
+            The usernames will be {{formGenerateUser.prefix + formGenerateUser.number_from + formGenerateUser.suffix}},
+            <span v-if="formGenerateUser.number_from + 1 < formGenerateUser.number_to">
+              {{formGenerateUser.prefix + (formGenerateUser.number_from + 1) + formGenerateUser.suffix + '...'}}
+            </span>
+            <span v-if="formGenerateUser.number_from + 1 <= formGenerateUser.number_to">
+              {{formGenerateUser.prefix + formGenerateUser.number_to + formGenerateUser.suffix}}
             </span>
           </span>
         </el-form-item>
@@ -187,17 +243,38 @@ bob,Bob,bob@example.com,pass5678</pre>
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="Problem Permission">
-              <el-select v-model="user.problem_permission">
+            <el-form-item :label="$t('m.Problem_Permission')">
+              <el-select v-model="user.problem_permission" :disabled="user.admin_type!=='Admin'">
                 <el-option label="None" value="None"></el-option>
                 <el-option label="Own" value="Own"></el-option>
                 <el-option label="All" value="All"></el-option>
               </el-select>
             </el-form-item>
           </el-col>
-          <el-col :span="12">
-            <el-form-item label="Two-Factor Auth">
-              <el-switch v-model="user.real_tfa"></el-switch>
+          <el-col :span="8">
+            <el-form-item :label="$t('m.Two_Factor_Auth')">
+              <el-switch
+                v-model="user.two_factor_auth"
+                :disabled="!user.real_tfa"
+                active-color="#13ce66"
+                inactive-color="#ff4949">
+              </el-switch>
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="Open Api">
+              <el-switch
+                v-model="user.open_api"
+                active-color="#13ce66"
+                inactive-color="#ff4949">
+              </el-switch>
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item :label="$t('m.Is_Disabled')">
+              <el-switch
+                v-model="user.is_disabled">
+              </el-switch>
             </el-form-item>
           </el-col>
         </el-row>
@@ -207,7 +284,8 @@ bob,Bob,bob@example.com,pass5678</pre>
         <save @click.native="saveUser()"></save>
       </span>
     </el-dialog>
-    <!-- Group users dialog -->
+
+    <!-- [ADD] Group users dialog -->
     <el-dialog
       title="Group selected users"
       :visible.sync="showGroupDialog"
@@ -238,6 +316,7 @@ bob,Bob,bob@example.com,pass5678</pre>
         <save @click.native="confirmGroup" :loading="groupSubmitting">Save</save>
       </span>
     </el-dialog>
+
   </div>
 </template>
 
@@ -280,8 +359,8 @@ bob,Bob,bob@example.com,pass5678</pre>
         },
         showGroupDialog: false,
         groupSubmitting: false,
-        availableGroups: [],        
-        groupForm: { selected: '', name: '' } 
+        availableGroups: [],
+        groupForm: { selected: '', name: '' },
       }
     },
     mounted () {
@@ -312,16 +391,6 @@ bob,Bob,bob@example.com,pass5678</pre>
           this.user.real_tfa = this.user.two_factor_auth
         })
       },
-      resetPassword (id) {
-        this.$confirm('Sure to reset the password to 123456?', 'confirm', {
-          type: 'warning'
-        }).then(() => {
-          api.resetPassword(id).then(res => {
-          }).catch(() => {
-          })
-        }, () => {
-        })
-      },
       // 获取用户列表
       getUserList (page) {
         this.loadingTable = true
@@ -334,7 +403,7 @@ bob,Bob,bob@example.com,pass5678</pre>
         })
       },
       deleteUsers (ids) {
-        this.$confirm('Sure to delete the user? The associated resources will be removed as well, like problem, contest, announcement, etc.', 'confirm', {
+        this.$confirm('Sure to delete the user? The associated resources created by this user will be deleted as well, like problem, contest, announcement, etc.', 'confirm', {
           type: 'warning'
         }).then(() => {
           api.deleteUsers(ids.join(',')).then(res => {
@@ -390,29 +459,26 @@ bob,Bob,bob@example.com,pass5678</pre>
       handleUsersUpload () {
         api.importUsers(this.uploadUsers).then(res => {
           this.getUserList(1)
+          this.handleResetData()
         }).catch(() => {
         })
       },
       handleResetData () {
         this.uploadUsers = []
       },
+      // [ADD] เปิด dialog และโหลดรายชื่อกลุ่ม
       openGroupDialog () {
         this.groupForm = { selected: '', name: '' }
         this.showGroupDialog = true
-        this.loadGroups()  // โหลดรายชื่อกลุ่มปัจจุบัน
+        this.loadGroups()
       },
-
       loadGroups () {
-        // เรียก API เพื่อดึงรายการ group
-        // (จะไปเพิ่มเมธอดใน api.js ข้อ 5)
         api.getGroupList().then(res => {
-          // คาดหวังรูป { data: { data: [{id, name}, ...] } }
           this.availableGroups = res.data.data || []
         }).catch(() => {
           this.availableGroups = []
         })
       },
-
       confirmGroup () {
         const user_ids = this.selectedUserIDs
         const group_name = (this.groupForm.name || this.groupForm.selected || '').trim()
@@ -425,15 +491,14 @@ bob,Bob,bob@example.com,pass5678</pre>
           return
         }
         this.groupSubmitting = true
-        // เรียก API assign กลุ่มให้ users (จะไปเพิ่มเมธอดใน api.js ข้อ 5)
         api.assignUsersToGroup({ user_ids, group_name }).then(() => {
           this.groupSubmitting = false
           this.showGroupDialog = false
-          this.getUserList(this.currentPage) // refresh ตาราง
+          this.getUserList(this.currentPage) // refresh
         }).catch(() => {
           this.groupSubmitting = false
         })
-      }
+      },
     },
     computed: {
       selectedUserIDs () {
@@ -476,6 +541,104 @@ bob,Bob,bob@example.com,pass5678</pre>
     p {
       margin: 0;
       text-align: left;
+    }
+  }
+
+  /* Container หลัก */
+  .header-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+  }
+
+  /* ส่วนปุ่มกลุ่ม */
+  .bulk-actions-section {
+    display: flex;
+    align-items: center;
+    gap: 0px; /* ระยะห่างระหว่างปุ่ม */
+    flex-shrink: 0;
+  }
+
+  /* ส่วนช่องค้นหา */
+  .search-section {
+    flex: 1;
+    display: flex;
+    align-items: center;
+  }
+
+  /* ปรับแต่งปุ่มแต่ละปุ่มให้สวยงาม */
+  .action-button {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border-radius: 6px;
+    transition: all 0.3s ease;
+    height: 32px;
+    padding: 0 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .action-button i {
+    margin-right: 4px;
+  }
+
+  /* Hover effects สำหรับปุ่มแต่ละปุ่ม */
+  .action-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  /* ปรับแต่ง input ให้ตรงกับปุ่ม */
+  .search-section .el-input {
+    transition: all 0.3s ease;
+  }
+
+  .search-section .el-input /deep/ .el-input__inner {
+    height: 32px;
+    line-height: 32px;
+    border-radius: 6px;
+  }
+
+  .search-section .el-input:focus-within {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(64, 158, 255, 0.2);
+  }
+
+  /* Animation เมื่อปุ่มปรากฏ */
+  .bulk-actions-section {
+    animation: slideInLeft 0.3s ease-out;
+  }
+
+  @keyframes slideInLeft {
+    from {
+      opacity: 0;
+      transform: translateX(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  /* Responsive design */
+  @media (max-width: 768px) {
+    .header-container {
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .bulk-actions-section,
+    .search-section {
+      width: 100%;
+    }
+    
+    .search-section {
+      flex: none;
+    }
+    
+    .bulk-actions-section {
+      justify-content: flex-start;
     }
   }
 </style>
