@@ -313,22 +313,20 @@
 
       <span slot="footer" class="dialog-footer">
         <cancel @click.native="showGroupDialog = false">Cancel</cancel>
-
-        <!-- [ADD] ลบออกจากกลุ่มที่เลือก -->
+      
         <el-button type="danger"
-                  :disabled="!groupForm.selected"
-                  :loading="removeSubmitting"
-                  @click="removeFromGroup">
+                   :disabled="!groupForm.selected"
+                   :loading="removeSubmitting"
+                   @click="removeFromGroup">
           Remove from group
         </el-button>
-
-        <!-- [ADD] ลบออกจากทุกกลุ่ม (มี confirm) -->
+      
         <el-button type="text"
-                  :loading="clearAllSubmitting"
-                  @click="clearAllGroups">
+                   :loading="clearAllSubmitting"
+                   @click="clearAllGroups">
           Clear all groups
         </el-button>
-
+      
         <save @click.native="confirmGroup" :loading="groupSubmitting">Save</save>
       </span>
     </el-dialog>
@@ -421,15 +419,20 @@
         })
       },
       deleteUsers (ids) {
-        this.$confirm('Sure to delete the user? The associated resources created by this user will be deleted as well, like problem, contest, announcement, etc.', 'confirm', {
-          type: 'warning'
+        const list = Array.isArray(ids) ? ids : (ids ? String(ids).split(',') : [])
+        if (!list.length) return this.$error('Please select at least 1 user')
+
+        this.$confirm(
+          'Sure to delete the user? The associated resources created by this user will be deleted as well, like problem, contest, announcement, etc.',
+          'confirm',
+          { type: 'warning' }
+        ).then(() => {
+          // ส่งเป็น comma-separated string ให้ API
+          return api.deleteUsers(list.join(','))
         }).then(() => {
-          api.deleteUsers(ids.join(',')).then(res => {
-            this.getUserList(this.currentPage)
-          }).catch(() => {
-            this.getUserList(this.currentPage)
-          })
-        }, () => {
+          this.getUserList(this.currentPage)
+        }).catch(() => {
+          this.getUserList(this.currentPage)
         })
       },
       handleSelectionChange (val) {
@@ -553,7 +556,6 @@
         this.clearAllSubmitting = false
       }
       },
-    },
     computed: {
       selectedUserIDs () {
         let ids = []
@@ -577,7 +579,7 @@
       'uploadUsersCurrentPage' (page) {
         this.uploadUsersPage = this.uploadUsers.slice((page - 1) * this.uploadUsersPageSize, page * this.uploadUsersPageSize)
       }
-    }
+    },
   }
 </script>
 
