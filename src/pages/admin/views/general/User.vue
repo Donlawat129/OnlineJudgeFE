@@ -516,45 +516,42 @@
           this.groupSubmitting = false
         })
       },
-      removeFromGroup () {
-        const user_ids = this.selectedUserIDs
-        const group_name = (this.groupForm.selected || '').trim()
-        if (!user_ids.length) return this.$error('Please select at least 1 user')
-        if (!group_name) return this.$error('Please select a group to remove')
+      async removeFromGroup () {
+      const user_ids = this.selectedUserIDs
+      const group_name = (this.groupForm.selected || '').trim()
+      if (!user_ids.length) return this.$error('Please select at least 1 user')
+      if (!group_name) return this.$error('Please select a group to remove')
 
-        this.$confirm(
-          `Remove ${user_ids.length} user(s) from group "${group_name}" ?`,
-          'Confirm',
-          { type: 'warning' }
-        ).then(() => {
-          this.removeSubmitting = true
-          api.removeUsersFromGroup({ user_ids, group_name })
-            .then(() => {
-              this.removeSubmitting = false
-              this.getUserList(this.currentPage)
-              this.$success('Removed from group')
-            })
-            .catch(() => { this.removeSubmitting = false })
-        }).catch(() => {})
+      try {
+        await this.$confirm(`Remove ${user_ids.length} user(s) from group "${group_name}" ?`, 'Confirm', { type: 'warning' })
+      } catch (e) { return }
+
+      this.removeSubmitting = true
+      try {
+        await api.removeUsersFromGroup({ user_ids, group_name })
+        this.$success('Removed from group')
+        this.getUserList(this.currentPage)
+      } finally {
+        this.removeSubmitting = false
+      }
       },
-      clearAllGroups () {
-        const user_ids = this.selectedUserIDs
-        if (!user_ids.length) return this.$error('Please select at least 1 user')
 
-        this.$confirm(
-          `Remove ${user_ids.length} user(s) from ALL groups?`,
-          'Confirm',
-          { type: 'warning' }
-        ).then(() => {
-          this.clearAllSubmitting = true
-          api.clearUsersGroups({ user_ids })
-            .then(() => {
-              this.clearAllSubmitting = false
-              this.getUserList(this.currentPage)
-              this.$success('Cleared all groups')
-            })
-            .catch(() => { this.clearAllSubmitting = false })
-        }).catch(() => {})
+    async clearAllGroups () {
+      const user_ids = this.selectedUserIDs
+      if (!user_ids.length) return this.$error('Please select at least 1 user')
+
+      try {
+        await this.$confirm(`Remove ${user_ids.length} user(s) from ALL groups?`, 'Confirm', { type: 'warning' })
+      } catch (e) { return }
+
+      this.clearAllSubmitting = true
+      try {
+        await api.clearUsersGroups({ user_ids })
+        this.$success('Cleared all groups')
+        this.getUserList(this.currentPage)
+      } finally {
+        this.clearAllSubmitting = false
+      }
       },
     },
     computed: {
