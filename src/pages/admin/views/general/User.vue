@@ -305,13 +305,17 @@
         <el-form-item label="Create / input a new group name">
           <el-input v-model="groupForm.name" placeholder="e.g. A1 / Beginner / Special"></el-input>
         </el-form-item>
-
-        <el-alert type="info" :closable="false" show-icon>
-          Users selected: {{ selectedUserIDs.length }}
-        </el-alert>
       </el-form>
+      <div class="right">
+      <el-button type="text"
+            :loading="clearAllSubmitting"
+            @click="clearAllGroups">
+          Clear all groups
+      </el-button>
+      </div>
 
       <span slot="footer" class="dialog-footer">
+    
         <cancel @click.native="showGroupDialog = false">Cancel</cancel>
       
         <el-button type="danger"
@@ -319,12 +323,6 @@
                    :loading="removeSubmitting"
                    @click="removeFromGroup">
           Remove from group
-        </el-button>
-      
-        <el-button type="text"
-                   :loading="clearAllSubmitting"
-                   @click="clearAllGroups">
-          Clear all groups
         </el-button>
       
         <save @click.native="confirmGroup" :loading="groupSubmitting">Save</save>

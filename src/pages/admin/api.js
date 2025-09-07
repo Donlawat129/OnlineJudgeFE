@@ -229,8 +229,10 @@ function ajax (url, method = 'get', {params, data, headers = {}} = {}) {
       url, method, headers,
       validateStatus: s => s >= 200 && s < 500
     }
-    if (method === 'get') options.params = params
-    else options.data = data
+    if (params) options.params = params; // ใส่ query string ได้ทุกเมธอด
+    if (['post','put','patch','delete'].includes(method) && data !== undefined) {
+      options.data = data;
+    }
 
     axios(options).then(res => {
       const isOK = res.status === 200 && res.data && !res.data.error
