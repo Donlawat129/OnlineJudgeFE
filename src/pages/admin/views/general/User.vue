@@ -556,6 +556,7 @@
         this.clearAllSubmitting = false
       }
       },
+  },
     computed: {
       selectedUserIDs () {
         let ids = []
@@ -579,12 +580,10 @@
       'uploadUsersCurrentPage' (page) {
         this.uploadUsersPage = this.uploadUsers.slice((page - 1) * this.uploadUsersPageSize, page * this.uploadUsersPageSize)
       }
-    },
+    }
   }
-}
-
-
 </script>
+
 
 <style scoped lang="less">
   .import-user-icon {
