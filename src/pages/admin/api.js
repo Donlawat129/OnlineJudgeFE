@@ -129,8 +129,8 @@ export default {
   getLanguages () {
     return ajax('languages', 'get')
   },
-  getProblemTagList () {
-    return ajax('problem/tags', 'get')
+  getProblemTagList (params) {
+    return ajax('problem/tags', 'get', { params })
   },
   addProblemTag (tag_name) {
     return ajax('problem/tags', 'post', { data: { tag_name } })
@@ -230,6 +230,10 @@ export default {
     const id = Array.isArray(ids) ? ids.join(',') : ids
     return ajax('admin/problem', 'delete', { params: { id } })
   },
+  compileSPJ (data) {
+    return ajax('admin/compile_spj', 'post', { data })
+  },
+
 }
 
 /**

@@ -626,9 +626,9 @@
           }
         }
         let funcName = {
-          'create-problem': 'createProblem',
+          'create-problem': 'addProblem',              // ← ชื่อที่มีจริงใน api.js
           'edit-problem': 'editProblem',
-          'create-contest-problem': 'createContestProblem',
+          'create-contest-problem': 'addContestProblem', // ← ชื่อที่มีจริงใน api.js
           'edit-contest-problem': 'editContestProblem'
         }[this.routeName]
         // edit contest problem 时, contest_id会被后来的请求覆盖掉
