@@ -59,8 +59,8 @@ export default {
   editUser (data) {
     return ajax('admin/user', 'put', { data })
   },
-  deleteUsers (ids) {
-    return ajax('admin/user', 'delete', { params: { id: ids } })
+  deleteUsers (id) {
+    return ajax('admin/user', 'delete', { params: { id }})
   },
   addUser (data) {
     return ajax('admin/user', 'post', { data })
@@ -202,15 +202,15 @@ export default {
   return ajax('admin/groups', 'get')
   },
   assignUsersToGroup (data) {
-    // { user_ids: [1,2], group_name: 'A1' }
+    // { user_id: [1,2], group_name: 'A1' }
     return ajax('admin/groups/assign', 'post', { data })
   },
   removeUsersFromGroup (data) {
-    // { user_ids: [1,2], group_name: 'A1' }
+    // { user_id: [1,2], group_name: 'A1' }
     return ajax('admin/groups/remove', 'post', { data })
   },
   clearUsersGroups (data) {
-    // { user_ids: [1,2] }
+    // { user_id: [1,2] }
     return ajax('admin/groups/clear', 'post', { data })
   },
 }
