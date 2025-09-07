@@ -213,6 +213,23 @@ export default {
     // { user_id: [1,2] }
     return ajax('admin/groups/clear', 'post', { data })
   },
+  assignProblemsToGroup (data) {
+    // { problem_ids: [1,2], group_name: 'A1', replace_existing?: true }
+    return ajax('admin/problem/groups/assign', 'post', { data })
+  },
+  removeProblemsFromGroup (data) {
+    // { problem_ids: [1,2], group_name: 'A1' }
+    return ajax('admin/problem/groups/remove', 'post', { data })
+  },
+  clearProblemsGroups (data) {
+    // { problem_ids: [1,2] }
+    return ajax('admin/problem/groups/clear', 'post', { data })
+  },
+    // ลบหลายปัญหาในคราวเดียว (ถ้าแก้ backend ให้รับ id=1,2,3 แล้ว)
+  deleteProblem (ids) {
+    const id = Array.isArray(ids) ? ids.join(',') : ids
+    return ajax('admin/problem', 'delete', { params: { id } })
+  },
 }
 
 /**

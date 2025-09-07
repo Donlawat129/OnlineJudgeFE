@@ -2,11 +2,41 @@
   <div class="view">
     <Panel :title="contestId ? this.$i18n.t('m.Contest_Problem_List') : this.$i18n.t('m.Problem_List')">
       <div slot="header">
-        <el-input
-          v-model="keyword"
-          prefix-icon="el-icon-search"
-          placeholder="Keywords">
-        </el-input>
+        <div class="header-container">
+          <!-- ปุ่มลบบนหัว ถ้ามีเลือกอย่างน้อย 1 -->
+          <div class="bulk-actions-section" v-show="selectedProblemIDs.length">
+            
+            <el-button
+              type="primary"
+              icon="el-icon-fa-users"
+              size="small"
+              class="action-button"
+              @click="openGroupDialog"
+            >
+              Group
+            </el-button>
+            
+            <el-button
+              type="warning"
+              icon="el-icon-fa-trash"
+              size="small"
+              class="action-button"
+              @click="deleteProblems(selectedProblemIDs)"
+            >
+              Delete
+            </el-button>
+          </div>
+
+          <!-- ช่องค้นหา -->
+          <div class="search-section" :class="{ 'with-buttons': selectedProblemIDs.length }">
+            <el-input
+              v-model="keyword"
+              prefix-icon="el-icon-search"
+              placeholder="Keywords"
+              clearable
+            />
+          </div>
+        </div>
       </div>
       <el-table
         v-loading="loading"
@@ -14,7 +44,10 @@
         ref="table"
         :data="problemList"
         @row-dblclick="handleDblclick"
-        style="width: 100%">
+        @selection-change="handleSelectionChange"
+        style="width: 100%"
+      >
+        <el-table-column type="selection" width="55"></el-table-column>
         <el-table-column
           width="100"
           prop="id"
@@ -53,6 +86,16 @@
             {{scope.row.create_time | localtime }}
           </template>
         </el-table-column>
+        <el-table-column label="Group">
+          <template slot-scope="scope">
+            <template v-if="scope.row.groups && scope.row.groups.length">
+              <el-tag v-for="(g,i) in scope.row.groups" :key="g+i" size="mini" style="margin-right:4px">
+                {{ g }}
+              </el-tag>
+            </template>
+            <span v-else>—</span>
+          </template>
+        </el-table-column>
         <el-table-column
           width="100"
           prop="visible"
@@ -76,7 +119,7 @@
             <icon-btn icon="download" name="Download TestCase"
                       @click.native="downloadTestCase(scope.row.id)"></icon-btn>
             <icon-btn icon="trash" name="Delete Problem"
-                      @click.native="deleteProblem(scope.row.id)"></icon-btn>
+                      @click.native="deleteProblem([scope.row.id])"></icon-btn>
           </div>
         </el-table-column>
       </el-table>
@@ -117,6 +160,50 @@
                @close-on-click-modal="false">
       <add-problem-component :contestID="contestId" @on-change="getProblemList"></add-problem-component>
     </el-dialog>
+
+    <!-- [ADD] Group users dialog -->
+    <el-dialog
+      title="Group selected problems"
+      :visible.sync="showGroupDialog"
+      :close-on-click-modal="false"
+      width="480px"
+    >
+      <el-form :model="groupForm" label-position="top">
+        <el-form-item label="Choose existing group">
+          <el-select v-model="groupForm.selected" placeholder="Select a group" filterable clearable>
+            <el-option v-for="g in availableGroups" :key="g.id || g.name" :label="g.name" :value="g.name" />
+          </el-select>
+        </el-form-item>
+
+        <div style="text-align:center;margin:8px 0;color:#888">— OR —</div>
+
+        <el-form-item label="Create / input a new group name">
+          <el-input v-model="groupForm.name" placeholder="e.g. A1 / Beginner / Special" />
+        </el-form-item>
+      </el-form>
+      <div class="right">
+      <el-button type="text"
+            :loading="clearAllSubmitting"
+            @click="clearAllGroups">
+          Clear all groups
+      </el-button>
+      </div>
+
+      <span slot="footer" class="dialog-footer">
+    
+        <cancel @click.native="showGroupDialog = false">Cancel</cancel>
+      
+        <el-button type="danger"
+                   :disabled="!groupForm.selected"
+                   :loading="removeSubmitting"
+                   @click="removeFromGroup">
+          Remove from group
+        </el-button>
+      
+        <save @click.native="confirmGroup" :loading="groupSubmitting">Save</save>
+      </span>
+    </el-dialog>
+    
   </div>
 </template>
 
@@ -145,7 +232,14 @@
         currentRow: {},
         InlineEditDialogVisible: false,
         makePublicDialogVisible: false,
-        addProblemDialogVisible: false
+        addProblemDialogVisible: false,
+        selectedProblems: [],
+        showGroupDialog: false,
+        groupSubmitting: false,
+        availableGroups: [],
+        groupForm: { selected: '', name: '' },
+        removeSubmitting: false,
+        clearAllSubmitting: false,
       }
     },
     mounted () {
@@ -240,20 +334,199 @@
       },
       getPublicProblem () {
         api.getProblemList()
+      },
+      handleSelectionChange (val) {
+        this.selectedProblems = val
+      },
+      openGroupDialog () {
+        this.groupForm = { selected: '', name: '' }
+        this.showGroupDialog = true
+        this.loadGroups()
+      },
+      loadGroups () {
+        api.getGroupList().then(res => {
+          this.availableGroups = res.data.data || []
+        }).catch(() => { this.availableGroups = [] })
+      },
+      confirmGroup () {
+        const problem_ids = this.selectedProblemIDs
+        const group_name = (this.groupForm.name || this.groupForm.selected || '').trim()
+        if (!problem_ids.length) return this.$error('Please select at least 1 problem')
+        if (!group_name) return this.$error('Please select or input a group name')
+
+        this.groupSubmitting = true
+        api.assignProblemsToGroup({ problem_ids, group_name })
+          .then(() => {
+            this.getProblemList(this.currentPage)
+            return this.loadGroups()
+          })
+          .then(() => { this.showGroupDialog = false })
+          .finally(() => { this.groupSubmitting = false })
+      },
+      async removeFromGroup () {
+        const problem_ids = this.selectedProblemIDs
+        const group_name = (this.groupForm.selected || '').trim()
+        if (!problem_ids.length) return this.$error('Please select at least 1 problem')
+        if (!group_name) return this.$error('Please select a group to remove')
+
+        try { await this.$confirm(`Remove ${problem_ids.length} problem(s) from group "${group_name}" ?`, 'Confirm', { type: 'warning' }) }
+        catch (e) { return }
+
+        this.removeSubmitting = true
+        try {
+          await api.removeProblemsFromGroup({ problem_ids, group_name })
+          this.$success('Removed from group')
+          this.getProblemList(this.currentPage)
+        } finally { this.removeSubmitting = false }
+      },
+      async clearAllGroups () {
+        const problem_ids = this.selectedProblemIDs
+        if (!problem_ids.length) return this.$error('Please select at least 1 problem')
+
+        try { await this.$confirm(`Remove ${problem_ids.length} problem(s) from ALL groups?`, 'Confirm', { type: 'warning' }) }
+        catch (e) { return }
+
+        this.clearAllSubmitting = true
+        try {
+          await api.clearProblemsGroups({ problem_ids })
+          this.$success('Cleared all groups')
+          this.getProblemList(this.currentPage)
+        } finally { this.clearAllSubmitting = false }
+      },
+
+      deleteProblems (ids) {
+        const list = Array.isArray(ids) ? ids : (ids ? String(ids).split(',') : [])
+        if (!list.length) return this.$error('Please select at least 1 problem')
+
+        this.$confirm(
+          'Sure to delete the selected problem(s)? The associated submissions will be deleted as well.',
+          'Delete Problem',
+          { type: 'warning' }
+        ).then(() => {
+          // ใช้ฟังก์ชันลบให้ถูกหน้าว่าอยู่ Problem ปกติหรือใน Contest
+          const funcName = this.routeName === 'problem-list' ? 'deleteProblem' : 'deleteContestProblem'
+          return api[funcName](list.join(','))   // ส่ง comma-separated เหมือนหน้า User
+        }).then(() => {
+          // ถ้าลบหมดหน้าปัจจุบัน ให้ถอยหน้าลง 1 เพื่อไม่ให้หน้าว่าง
+          const nextPage = Math.max(1, this.currentPage - (list.length >= this.problemList.length ? 1 : 0))
+          this.getProblemList(nextPage)
+        }).catch(() => {})
+      },
+    },
+    computed: {
+      selectedProblemIDs () {
+        return this.selectedProblems.map(p => p.id)
       }
     },
     watch: {
-      '$route' (newVal, oldVal) {
+      '$route' (newVal) {
         this.contestId = newVal.params.contestId
         this.routeName = newVal.name
         this.getProblemList(this.currentPage)
       },
-      'keyword' () {
-        this.currentChange()
+      keyword () {
+        this.currentChange(1)
       }
     }
   }
 </script>
 
 <style scoped lang="less">
+/* Container หลัก */
+  .header-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+  }
+
+  /* ส่วนปุ่มกลุ่ม */
+  .bulk-actions-section {
+    display: flex;
+    align-items: center;
+    gap: 0px; /* ระยะห่างระหว่างปุ่ม */
+    flex-shrink: 0;
+  }
+
+  /* ส่วนช่องค้นหา */
+  .search-section {
+    flex: 1;
+    display: flex;
+    align-items: center;
+  }
+
+  /* ปรับแต่งปุ่มแต่ละปุ่มให้สวยงาม */
+  .action-button {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border-radius: 6px;
+    transition: all 0.3s ease;
+    height: 32px;
+    padding: 0 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .action-button i {
+    margin-right: 4px;
+  }
+
+  /* Hover effects สำหรับปุ่มแต่ละปุ่ม */
+  .action-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  /* ปรับแต่ง input ให้ตรงกับปุ่ม */
+  .search-section .el-input {
+    transition: all 0.3s ease;
+  }
+
+  .search-section .el-input /deep/ .el-input__inner {
+    height: 32px;
+    line-height: 32px;
+    border-radius: 6px;
+  }
+
+  .search-section .el-input:focus-within {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(64, 158, 255, 0.2);
+  }
+
+  /* Animation เมื่อปุ่มปรากฏ */
+  .bulk-actions-section {
+    animation: slideInLeft 0.3s ease-out;
+  }
+
+  @keyframes slideInLeft {
+    from {
+      opacity: 0;
+      transform: translateX(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  /* Responsive design */
+  @media (max-width: 768px) {
+    .header-container {
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .bulk-actions-section,
+    .search-section {
+      width: 100%;
+    }
+    
+    .search-section {
+      flex: none;
+    }
+    
+    .bulk-actions-section {
+      justify-content: flex-start;
+    }
+  }
 </style>
