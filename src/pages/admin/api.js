@@ -226,51 +226,26 @@ function ajax (url, method = 'get', {params, data, headers = {}} = {}) {
   return new Promise((resolve, reject) => {
     method = method.toLowerCase()
     let options = {
-      url,
-      method,
-      headers,
-      validateStatus: function (status) {
-        return status >= 200 && status < 500
-      }
+      url, method, headers,
+      validateStatus: s => s >= 200 && s < 500
     }
-
-    if (method === 'get') {
-      options.params = params
-    } else {
-      options.data = data
-    }
+    if (method === 'get') options.params = params
+    else options.data = data
 
     axios(options).then(res => {
-      if (res.status === 403) {
-        Vue.prototype.$error('403: Forbidden. You are not authorized to access this resource.')
+      const isOK = res.status === 200 && res.data && !res.data.error
+      if (!isOK) {
+        const msg = (res.data && (res.data.error || res.data.data)) || 'Server error'
+        Vue.prototype.$error(msg)
+        return Promise.reject(res)
       }
-      if (res.status === 401) {
-        // 登录失败
-        // 使用Promise.resolve / reject而不是then方法，确保任务在queue中按顺序执行
-        // 这里的closeAll解决登录失败时不断弹出失败alert的bug
-        Vue.prototype.$closeAll()
-        Vue.prototype.$alert(res.data.data, 'Login failure', {
-          type: 'error'
-        }).then(() => {
-          router.push({ name: 'login' })
-        })
-        reject(res)
-      } else if (res.status !== 200) {
-        reject(res)
-        // 接口请求返回失败
-        if (res.data && res.data.data) {
-          Vue.prototype.$error(res.data.data)
-        }
-      } else {
-        resolve(res)
-        if (method !== 'get') {
-          Vue.prototype.$success('Succeeded')
-        }
-      }
-    }, res => {
-      // API请求异常，一般为Server error 或 network error
-      reject(res)
-      Vue.prototype.$error(res.data.data)
+      if (method !== 'get') Vue.prototype.$success('Succeeded')
+      return resolve(res)
+    }, err => {
+      const msg = (err.response && err.response.data && (err.response.data.error || err.response.data.data)) || 'Network error'
+      Vue.prototype.$error(msg)
+      reject(err)
     })
   })
 }
+

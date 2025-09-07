@@ -497,22 +497,17 @@
       confirmGroup () {
         const user_ids = this.selectedUserIDs
         const group_name = (this.groupForm.name || this.groupForm.selected || '').trim()
-        if (!user_ids.length) {
-          this.$error('Please select at least 1 user')
-          return
-        }
-        if (!group_name) {
-          this.$error('Please select or input a group name')
-          return
-        }
+        if (!user_ids.length) return this.$error('Please select at least 1 user')
+        if (!group_name) return this.$error('Please select or input a group name')
+
         this.groupSubmitting = true
-        api.assignUsersToGroup({ user_ids, group_name }).then(() => {
-          this.groupSubmitting = false
-          this.showGroupDialog = false
-          this.getUserList(this.currentPage) // refresh
-        }).catch(() => {
-          this.groupSubmitting = false
-        })
+        api.assignUsersToGroup({ user_ids, group_name })
+          .then(() => {
+            this.getUserList(this.currentPage)
+            return this.loadGroups()          // ⬅ รีเฟรชรายชื่อกลุ่ม
+          })
+          .then(() => { this.showGroupDialog = false })
+          .finally(() => { this.groupSubmitting = false })
       },
       async removeFromGroup () {
       const user_ids = this.selectedUserIDs
