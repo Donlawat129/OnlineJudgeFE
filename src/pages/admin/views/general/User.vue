@@ -14,9 +14,9 @@
             >
               Group
             </el-button>
-            <el-button 
-              type="warning" 
-              icon="el-icon-fa-trash" 
+            <el-button
+              type="warning"
+              icon="el-icon-fa-trash"
               @click="deleteUsers(selectedUserIDs)"
               size="small"
               class="action-button"
@@ -581,6 +581,9 @@
       }
     },
   }
+}
+
+
 </script>
 
 <style scoped lang="less">
