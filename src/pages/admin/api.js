@@ -242,13 +242,10 @@ export default {
 function ajax (url, method = 'get', {params, data, headers = {}} = {}) {
   return new Promise((resolve, reject) => {
     method = method.toLowerCase()
-    let options = {
-      url, method, headers,
-      validateStatus: s => s >= 200 && s < 500
-    }
-    if (params) options.params = params; // ใส่ query string ได้ทุกเมธอด
+    const options = { url, method, headers, validateStatus: s => s >= 200 && s < 500 }
+    if (params) options.params = params
     if (['post','put','patch','delete'].includes(method) && data !== undefined) {
-      options.data = data;
+      options.data = data
     }
 
     axios(options).then(res => {
@@ -258,8 +255,21 @@ function ajax (url, method = 'get', {params, data, headers = {}} = {}) {
         Vue.prototype.$error(msg)
         return Promise.reject(res)
       }
-      if (method !== 'get') Vue.prototype.$success('Succeeded')
-      return resolve(res)
+
+      // ⬇⬇⬇ แก้ตรงนี้: เรียก message ให้ปลอดภัย
+      if (method !== 'get') {
+        try {
+          const m = Vue.prototype.$message
+          if (typeof m === 'function') {
+            m({ type: 'success', message: 'Succeeded' })
+          } else if (m && typeof m.success === 'function') {
+            m.success('Succeeded')
+          }
+        } catch (e) { /* no-op */ }
+      }
+      // ⬆⬆⬆
+
+      resolve(res)
     }, err => {
       const msg = (err.response && err.response.data && (err.response.data.error || err.response.data.data)) || 'Network error'
       Vue.prototype.$error(msg)
@@ -267,4 +277,5 @@ function ajax (url, method = 'get', {params, data, headers = {}} = {}) {
     })
   })
 }
+
 
