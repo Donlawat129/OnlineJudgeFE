@@ -270,10 +270,13 @@ function ajax (url, method, options) {
           Vue.prototype.$success('Succeeded')
         }
       }
-    }, res => {
-      // API请求异常，一般为Server error 或 network error
-      reject(res)
-      Vue.prototype.$error(res.data.data)
+    }, err => {
+      // <<< ใส่ส่วนนี้แทนของเดิม
+      const msg =
+        (err.response && err.response.data && (err.response.data.error || err.response.data.data)) ||
+        'Network error'
+      Vue.prototype.$error(msg)
+      reject(err)
     })
   })
 }

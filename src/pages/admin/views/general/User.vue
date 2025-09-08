@@ -341,40 +341,35 @@
     name: 'User',
     data () {
       return {
-        // 一页显示的用户数
         pageSize: 10,
-        // 用户总数
         total: 0,
-        // 用户列表
         userList: [],
         uploadUsers: [],
         uploadUsersPage: [],
         uploadUsersCurrentPage: 1,
         uploadUsersPageSize: 15,
-        // 搜索关键字
         keyword: '',
-        // 是否显示用户对话框
         showUserDialog: false,
-        // 当前用户model
         user: {},
+        currentPage: 1,          // ✅ เหลืออันเดียว
+        selectedUsers: [],       // ✅ เหลืออันเดียว
         loadingTable: false,
         loadingGenerate: false,
-        // 当前页码
-        currentPage: 0,
-        selectedUsers: [],
-        formGenerateUser: {
-          prefix: '',
-          suffix: '',
-          number_from: 0,
-          number_to: 0,
-          password_length: 8
-        },
+
         showGroupDialog: false,
         groupSubmitting: false,
         availableGroups: [],
         groupForm: { selected: '', name: '' },
         removeSubmitting: false,
         clearAllSubmitting: false,
+
+        formGenerateUser: {
+          prefix: '',
+          suffix: '',
+          number_from: 0,
+          number_to: 0,
+          password_length: 8
+        }
       }
     },
     mounted () {
@@ -406,30 +401,37 @@
         })
       },
       // 获取用户列表
-      getUserList (page) {
+      getUserList (page = 1) {
         this.loadingTable = true
-        api.getUserList((page - 1) * this.pageSize, this.pageSize, this.keyword).then(res => {
-          this.loadingTable = false
-          this.total = res.data.data.total
-          this.userList = res.data.data.results
-        }, res => {
-          this.loadingTable = false
-        })
-      },
-      deleteUsers (ids) {
-        this.$confirm('Sure to delete the user? The associated resources created by this user will be deleted as well, like problem, contest, announcement, etc.', 'confirm', {
-          type: 'warning'
-        }).then(() => {
-          api.deleteUsers(ids.join(',')).then(res => {
-            this.getUserList(this.currentPage)
-          }).catch(() => {
-            this.getUserList(this.currentPage)
+        api.getUserList((page - 1) * this.pageSize, this.pageSize, this.keyword)
+          .then(res => {
+            const { results, total } = res.data.data
+            this.userList = results       // ✅ ใช้ userList
+            this.total = total || 0       // ✅ อัปเดต total
+            this.currentPage = page
+            this.selectedUsers = []       // ✅ เคลียร์ selection
           })
-        }, () => {
-        })
+          .finally(() => {
+            this.loadingTable = false     // ✅ ปิดโหลดเสมอ
+          })
       },
+
+      deleteUsers (ids) {
+        const idStr = Array.isArray(ids) ? ids.join(',') : String(ids || '')
+        if (!idStr.trim()) return this.$error('Please select at least 1 user')
+
+        const isBulk = idStr.includes(',')
+        const title = isBulk ? 'Delete Users' : 'Delete User'
+        const msg   = isBulk ? 'Sure to delete the selected user(s)?' : 'Sure to delete this user?'
+
+        this.$confirm(msg, title, { type: 'warning' })
+          .then(() => api.deleteUsers(idStr))
+          .then(() => this.getUserList(this.currentPage))
+          .catch(() => {})
+      },
+
       handleSelectionChange (val) {
-        this.selectedUsers = val
+      this.selectedUsers = val
       },
       generateUser () {
         this.$refs['formGenerateUser'].validate((valid) => {
@@ -527,24 +529,23 @@
       }
       },
 
-    async clearAllGroups () {
-      const user_ids = this.selectedUserIDs
-      if (!user_ids.length) return this.$error('Please select at least 1 user')
+      async clearAllGroups () {
+        const user_ids = this.selectedUserIDs
+        if (!user_ids.length) return this.$error('Please select at least 1 user')
 
-      try {
-        await this.$confirm(`Remove ${user_ids.length} user(s) from ALL groups?`, 'Confirm', { type: 'warning' })
-      } catch (e) { return }
+        try {
+          await this.$confirm(`Remove ${user_ids.length} user(s) from ALL groups?`, 'Confirm', { type: 'warning' })
+        } catch (e) { return }
 
-      this.clearAllSubmitting = true
-      try {
-        await api.clearUsersGroups({ user_ids })
-        this.$success('Cleared all groups')
-        this.getUserList(this.currentPage)
-      } finally {
-        this.clearAllSubmitting = false
-      }
+        this.clearAllSubmitting = true
+        try {
+          await api.clearUsersGroups({ user_ids })
+          this.$success('Cleared all groups')
+          this.getUserList(this.currentPage)
+        } finally {
+          this.clearAllSubmitting = false
+        }
       },
-  },
     computed: {
       selectedUserIDs () {
         let ids = []
@@ -570,6 +571,7 @@
       }
     }
   }
+}
 </script>
 
 
