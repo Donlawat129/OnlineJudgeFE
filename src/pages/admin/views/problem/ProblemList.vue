@@ -369,29 +369,35 @@
         if (!problem_ids.length) return this.$error('Please select at least 1 problem')
         if (!group_name) return this.$error('Please select a group to remove')
 
-        try { await this.$confirm(`Remove ${problem_ids.length} problem(s) from group "${group_name}" ?`, 'Confirm', { type: 'warning' }) }
-        catch (e) { return }
+        try {
+          await this.$confirm(`Remove ${problem_ids.length} problem(s) from group "${group_name}" ?`, 'Confirm', { type: 'warning' })
+        } catch (e) { return }
 
         this.removeSubmitting = true
         try {
           await api.removeProblemsFromGroup({ problem_ids, group_name })
           this.$success('Removed from group')
           this.getProblemList(this.currentPage)
-        } finally { this.removeSubmitting = false }
+        } finally {
+          this.removeSubmitting = false
+        }
       },
       async clearAllGroups () {
         const problem_ids = this.selectedProblemIDs
         if (!problem_ids.length) return this.$error('Please select at least 1 problem')
 
-        try { await this.$confirm(`Remove ${problem_ids.length} problem(s) from ALL groups?`, 'Confirm', { type: 'warning' }) }
-        catch (e) { return }
+        try {
+          await this.$confirm(`Remove ${problem_ids.length} problem(s) from ALL groups?`, 'Confirm', { type: 'warning' })
+        } catch (e) { return }
 
         this.clearAllSubmitting = true
         try {
           await api.clearProblemsGroups({ problem_ids })
           this.$success('Cleared all groups')
           this.getProblemList(this.currentPage)
-        } finally { this.clearAllSubmitting = false }
+        } finally {
+          this.clearAllSubmitting = false
+        }
       },
 
       deleteProblems (ids) {
