@@ -3,7 +3,7 @@
     <Panel :title="contestId ? $i18n.t('m.Contest_Problem_List') : $i18n.t('m.Problem_List')">
       <div slot="header">
         <div class="header-container">
-          <!-- ปุ่มกลุ่ม/ลบ (โชว์เมื่อเลือกอย่างน้อย 1 รายการ) -->
+          <!-- ปุ่มกลุ่ม/ลบ (โชว์เมื่อเลือกอย่างน้อย 1 รายการ หรือโหมดเลือกทั้งผลลัพธ์) -->
           <div class="bulk-actions-section" v-show="selectedProblemIDs.length || selectAllAcross">
             <el-button
               type="primary"
@@ -26,7 +26,7 @@
             </el-button>
           </div>
 
-          <!-- ช่องค้นหาแบบต้นฉบับ -->
+          <!-- ช่องค้นหาแบบต้นฉบับ (พิมพ์แล้วคิวรีใหม่ผ่าน watcher) -->
           <div class="search-section" :class="{ 'with-buttons': selectedProblemIDs.length || selectAllAcross }">
             <el-input
               v-model="keyword"
@@ -305,25 +305,21 @@ export default {
     getProblemList (page = 1) {
       this.loading = true
       const isNormal = this.routeName === 'problem-list'
+      const offset = (page - 1) * this.pageSize
 
       if (isNormal) {
-        const offset = (page - 1) * this.pageSize
-        // admin/api.js: getProblemList(offset, limit, keyword, tag)
         api.getProblemList(offset, this.pageSize, this.keyword, '')
           .then(res => {
             this.total = res.data.data.total
-            const results = (res.data.data.results || []).map(p => ({ ...p, isEditing: false }))
-            this.problemList = results
+            this.problemList = res.data.data.results.map(p => ({ ...p, isEditing: false }))
             this.currentPage = page
           })
           .finally(() => { this.loading = false })
       } else {
-        // admin/api.js: getContestProblemList(contest_id, page, limit)
         api.getContestProblemList(this.contestId, page, this.pageSize)
           .then(res => {
             this.total = res.data.data.total
-            const results = (res.data.data.results || []).map(p => ({ ...p, isEditing: false }))
-            this.problemList = results
+            this.problemList = res.data.data.results.map(p => ({ ...p, isEditing: false }))
             this.currentPage = page
           })
           .finally(() => { this.loading = false })
@@ -591,7 +587,7 @@ export default {
     '$route' (newVal) {
       this.contestId = newVal.params.contestId
       this.routeName = newVal.name
-      // reset selection across whenเปลี่ยนหน้า/route
+      // reset selection across เมื่อเปลี่ยน route
       this.clearSelection()
       this.getProblemList(this.currentPage)
     },
