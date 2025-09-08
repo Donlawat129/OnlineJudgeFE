@@ -4,7 +4,7 @@
       <div slot="header">
         <div class="header-container">
           <!-- ปุ่มกลุ่ม/ลบ (โชว์เมื่อเลือกอย่างน้อย 1 รายการ) -->
-          <div class="bulk-actions-section" v-show="selectedProblemIDs.length">
+          <div class="bulk-actions-section" v-show="selectedProblemIDs.length || selectAllAcross">
             <el-button
               type="primary"
               icon="el-icon-fa-users"
@@ -19,14 +19,15 @@
               icon="el-icon-fa-trash"
               size="small"
               class="action-button"
-              @click="deleteProblems(selectedProblemIDs)"
+              :loading="deleteInProgress"
+              @click="handleDeleteClick"
             >
               Delete
             </el-button>
           </div>
 
           <!-- ช่องค้นหาแบบต้นฉบับ -->
-          <div class="search-section" :class="{ 'with-buttons': selectedProblemIDs.length }">
+          <div class="search-section" :class="{ 'with-buttons': selectedProblemIDs.length || selectAllAcross }">
             <el-input
               v-model="keyword"
               prefix-icon="el-icon-search"
@@ -34,10 +35,32 @@
             </el-input>
           </div>
         </div>
+
+        <!-- แถบแจ้งเตือน selection ข้ามหน้า -->
+        <div
+          v-if="(selectedProblemIDs.length && total) || selectAllAcross"
+          class="selection-info"
+        >
+          <template v-if="!selectAllAcross">
+            Selected {{ selectedProblemIDs.length }} on this page.
+            <el-link
+              v-if="selectedProblemIDs.length === problemList.length && total > problemList.length"
+              type="primary"
+              :disabled="collecting"
+              @click="selectAllAcrossResults"
+            >
+              Select all {{ total }} results
+            </el-link>
+          </template>
+          <template v-else>
+            All {{ total }} results are selected.
+          </template>
+          <el-link type="danger" @click="clearSelection" :disabled="collecting">Clear</el-link>
+        </div>
       </div>
 
       <el-table
-        v-loading="loading"
+        v-loading="loading || collecting"
         element-loading-text="loading"
         ref="table"
         :data="problemList"
@@ -248,10 +271,8 @@ export default {
       routeName: '',
       contestId: '',
 
-      currentProblemID: '',
       currentRow: {},
       InlineEditDialogVisible: false,
-      makePublicDialogVisible: false,
       addProblemDialogVisible: false,
 
       // group
@@ -261,7 +282,13 @@ export default {
       availableGroups: [],
       groupForm: { selected: '', name: '' },
       removeSubmitting: false,
-      clearAllSubmitting: false
+      clearAllSubmitting: false,
+
+      // select-all-across
+      selectAllAcross: false,
+      selectionFilter: null,   // snapshot ของตัวกรองตอนกด "Select all results"
+      collecting: false,       // กำลังรวบรวมไอดีทุกหน้า
+      deleteInProgress: false
     }
   },
   mounted () {
@@ -274,7 +301,7 @@ export default {
       row.isEditing = true
     },
 
-    // โหลดรายการ — เรียก API ให้ตรง signature เดิม (ไม่ส่ง object ตู้มเดียว)
+    // โหลดรายการ
     getProblemList (page = 1) {
       this.loading = true
       const isNormal = this.routeName === 'problem-list'
@@ -325,7 +352,103 @@ export default {
       }
     },
 
-    // ลบทีละ “หลายรายการ” (รองรับทั้งหน้า Problem และ Contest)
+    // ===== Select-all across pages =====
+    selectAllAcrossResults () {
+      // เซ็ตโหมด "เลือกทั้งหมดทุกหน้า" และ snapshot ฟิลเตอร์ปัจจุบัน
+      this.selectAllAcross = true
+      this.selectionFilter = {
+        keyword: this.keyword,
+        routeName: this.routeName,
+        contestId: this.contestId
+      }
+    },
+    clearSelection () {
+      this.selectAllAcross = false
+      this.selectionFilter = null
+      this.selectedProblems = []
+      this.$refs.table && this.$refs.table.clearSelection()
+    },
+
+    async fetchAllMatchingProblemIds () {
+      // รวบรวม id ของผลลัพธ์ทุกหน้าตามฟิลเตอร์ snapshot
+      const ids = []
+      this.collecting = true
+      try {
+        if (this.selectionFilter.routeName === 'problem-list') {
+          const limit = 1000
+          let offset = 0
+          while (offset < this.total) {
+            // ใช้ keyword จาก snapshot เพื่อกันกรณีผู้ใช้แก้ไขระหว่างทาง
+            const res = await api.getProblemList(offset, limit, this.selectionFilter.keyword, '')
+            const rows = (res.data.data.results || [])
+            ids.push(...rows.map(r => r.id))
+            offset += limit
+          }
+        } else {
+          // contest-problem-list ใช้ page + limit
+          const per = 200
+          const pages = Math.ceil(this.total / per)
+          for (let page = 1; page <= pages; page++) {
+            const res = await api.getContestProblemList(this.selectionFilter.contestId, page, per)
+            const rows = (res.data.data.results || [])
+            ids.push(...rows.map(r => r.id))
+          }
+        }
+      } finally {
+        this.collecting = false
+      }
+      return ids
+    },
+
+    // กดลบ (ถ้าอยู่ในโหมด select-all-across จะลบทั้งผลลัพธ์ทุกหน้า)
+    async handleDeleteClick () {
+      if (this.selectAllAcross) {
+        // ยืนยันการลบทั้งหมด
+        try {
+          await this.$confirm(
+            `Delete ALL ${this.total} result(s) matching the current search? The associated submissions will be deleted as well.`,
+            'Delete Problems',
+            { type: 'warning' }
+          )
+        } catch (e) { return }
+
+        this.deleteInProgress = true
+        try {
+          const allIds = await this.fetchAllMatchingProblemIds()
+          if (!allIds.length) {
+            this.$warning('No result to delete.')
+            return
+          }
+
+          if (this.selectionFilter.routeName === 'problem-list') {
+            // ลบทีละก้อนเพื่อลดปัญหา URL ยาวเกิน
+            const chunkSize = 200
+            for (let i = 0; i < allIds.length; i += chunkSize) {
+              const chunk = allIds.slice(i, i + chunkSize)
+              await api.deleteProblem(chunk.join(','))
+            }
+          } else {
+            // contest-problem-list: endpoint รองรับทีละไอดี
+            for (const id of allIds) {
+              await api.deleteContestProblem(id)
+            }
+          }
+
+          this.$success(`Deleted ${allIds.length} item(s).`)
+          this.clearSelection()
+          // โหลดหน้าใหม่ (เริ่มจากหน้า 1)
+          this.getProblemList(1)
+        } finally {
+          this.deleteInProgress = false
+        }
+        return
+      }
+
+      // ไม่ได้เลือกแบบ across => ลบเฉพาะที่เลือกในหน้านี้
+      this.deleteProblems(this.selectedProblemIDs)
+    },
+
+    // ลบเดี่ยว/หลายรายการแบบเดิม
     deleteProblems (ids) {
       const list = Array.isArray(ids) ? ids : (ids ? String(ids).split(',') : [])
       if (!list.length) return this.$error('Please select at least 1 problem')
@@ -337,23 +460,21 @@ export default {
       )
       .then(() => {
         if (this.routeName === 'problem-list') {
-          // endpoint ฝั่งปกติรองรับ comma-separated
           return api.deleteProblem(list.join(','))
         } else {
-          // contest-problem-list: เรียกทีละ id เพื่อชัวร์
-          return Promise.all(list.map(id => api.deleteContestProblem(id)))
+          // contest: ลบทีละ id
+          return list.reduce(
+            (p, id) => p.then(() => api.deleteContestProblem(id)),
+            Promise.resolve()
+          )
         }
       })
       .then(() => {
         const nextPage = Math.max(1, this.currentPage - (list.length >= this.problemList.length ? 1 : 0))
+        this.clearSelection()
         this.getProblemList(nextPage)
       })
       .catch(() => {})
-    },
-
-    // ลบจากปุ่มแถวเดียว
-    deleteProblem (id) {
-      this.deleteProblems([id])
     },
 
     makeContestProblemPublic (problemID) {
@@ -470,10 +591,14 @@ export default {
     '$route' (newVal) {
       this.contestId = newVal.params.contestId
       this.routeName = newVal.name
+      // reset selection across whenเปลี่ยนหน้า/route
+      this.clearSelection()
       this.getProblemList(this.currentPage)
     },
     // แบบต้นฉบับ: พิมพ์แล้วรีเฟรชทันที
     keyword () {
+      // ถ้าแก้ keyword ใหม่ ต้องตัดโหมด select-all-across ทิ้งเพื่อกันพลาด
+      if (this.selectAllAcross) this.clearSelection()
       this.currentChange(1)
     }
   }
@@ -519,6 +644,16 @@ export default {
 .action-button:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Banner แสดงสถานะการเลือก */
+.selection-info {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #666;
+  display: flex;
+  gap: 12px;
+  align-items: center;
 }
 
 /* สไตล์ input ให้เนียน */
