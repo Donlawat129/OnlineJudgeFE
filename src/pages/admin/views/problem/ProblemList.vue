@@ -27,14 +27,17 @@
             </el-button>
           </div>
 
-          <!-- ช่องค้นหา -->
           <div class="search-section" :class="{ 'with-buttons': selectedProblemIDs.length }">
             <el-input
               v-model="keyword"
-              prefix-icon="el-icon-search"
               placeholder="Keywords"
               clearable
-            />
+              prefix-icon="el-icon-search"
+              @keyup.enter.native="doSearch"
+              @clear="doSearch"
+            >
+              <el-button slot="append" icon="el-icon-search" @click="doSearch" />
+            </el-input>
           </div>
         </div>
       </div>
@@ -119,7 +122,7 @@
             <icon-btn icon="download" name="Download TestCase"
                       @click.native="downloadTestCase(scope.row.id)"></icon-btn>
             <icon-btn icon="trash" name="Delete Problem"
-                      @click.native="deleteProblem([scope.row.id])"></icon-btn>
+                      @click.native="deleteProblems([scope.row.id])"></icon-btn>
           </div>
         </el-table-column>
       </el-table>
@@ -250,6 +253,35 @@
     methods: {
       handleDblclick (row) {
         row.isEditing = true
+      },
+      doSearch () {
+        this.currentChange(1)
+      },
+      getProblemList (page = 1) {
+        this.loading = true
+        const isNormal = this.routeName === 'problem-list'
+
+        if (isNormal) {
+          const offset = (page - 1) * this.pageSize
+          api.getProblemList(offset, this.pageSize, this.keyword, '')   // tag ว่างไว้ก่อน
+            .then(res => {
+              this.total = res.data.data.total
+              const results = res.data.data.results.map(p => ({ ...p, isEditing: false }))
+              this.problemList = results
+              this.currentPage = page
+            })
+            .finally(() => { this.loading = false })
+        } else {
+          // contest-problem-list ใช้ page/limit
+          api.getContestProblemList(this.contestId, page, this.pageSize)
+            .then(res => {
+              this.total = res.data.data.total
+              const results = res.data.data.results.map(p => ({ ...p, isEditing: false }))
+              this.problemList = results
+              this.currentPage = page
+            })
+            .finally(() => { this.loading = false })
+        }
       },
       goEdit (problemId) {
         if (this.routeName === 'problem-list') {
@@ -408,15 +440,17 @@
           'Sure to delete the selected problem(s)? The associated submissions will be deleted as well.',
           'Delete Problem',
           { type: 'warning' }
-        ).then(() => {
-          // ใช้ฟังก์ชันลบให้ถูกหน้าว่าอยู่ Problem ปกติหรือใน Contest
+        )
+        .then(() => {
           const funcName = this.routeName === 'problem-list' ? 'deleteProblem' : 'deleteContestProblem'
-          return api[funcName](list.join(','))   // ส่ง comma-separated เหมือนหน้า User
-        }).then(() => {
-          // ถ้าลบหมดหน้าปัจจุบัน ให้ถอยหน้าลง 1 เพื่อไม่ให้หน้าว่าง
+          // ส่งเป็น comma-separated เช่น "12,13"
+          return api[funcName](list.join(','))
+        })
+        .then(() => {
           const nextPage = Math.max(1, this.currentPage - (list.length >= this.problemList.length ? 1 : 0))
           this.getProblemList(nextPage)
-        }).catch(() => {})
+        })
+        .catch(() => {})
       },
     },
     computed: {
@@ -430,9 +464,6 @@
         this.routeName = newVal.name
         this.getProblemList(this.currentPage)
       },
-      keyword () {
-        this.currentChange(1)
-      }
     }
   }
 </script>
