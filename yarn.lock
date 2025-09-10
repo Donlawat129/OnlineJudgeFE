@@ -7121,8 +7121,7 @@ simple-hotkeys@^1.0.3, simple-hotkeys@~1.0.3:
 
 "simple-hotkeys@github:itargaryen/simple-hotkeys":
   version "0.2.1"
-  resolved "https://codeload.github.com/itargaryen/simple-hotkeys/tar.gz/8a6b2cf19d06100ac86d7ce4d442df08c561b7e9"
-  integrity sha512-j/XFMl0rwTUHPx8EuUyfK7pMmnaELF1sJM3hsdxCHS7YoEZY9FFTHgJqF7/dj2/RgE/05BWJVI/o7/JyGJ0uJg==
+  resolved "git+ssh://git@github.com/itargaryen/simple-hotkeys.git#8a6b2cf19d06100ac86d7ce4d442df08c561b7e9"
 
 simple-module@^2.0.6, simple-module@~2.0.5, simple-module@~2.0.6:
   version "2.0.6"
@@ -7133,8 +7132,7 @@ simple-module@^2.0.6, simple-module@~2.0.5, simple-module@~2.0.6:
 
 "simple-module@github:itargaryen/simple-module#v2.1.0":
   version "2.1.0"
-  resolved "https://codeload.github.com/itargaryen/simple-module/tar.gz/ea2688c579170eca533cd0bd8ba7f83c8d241a1c"
-  integrity sha512-EYyStshAamO+SBlPkMGYhSgGxPualnm6ECUby+laK2nmtt5jsstYKk9wL8UNsOPOyZ5jEo8gURJibb1oiCKTuQ==
+  resolved "git+ssh://git@github.com/itargaryen/simple-module.git#ea2688c579170eca533cd0bd8ba7f83c8d241a1c"
   dependencies:
     jquery "=3.1.1"
 
@@ -7155,8 +7153,7 @@ simple-uploader@^2.0.7, simple-uploader@~2.0.7:
 
 "simple-uploader@github:itargaryen/simple-uploader#v2.1.0":
   version "2.1.0"
-  resolved "https://codeload.github.com/itargaryen/simple-uploader/tar.gz/79d795ca1ce0b163c0e335fddad5bf9393004780"
-  integrity sha512-e+ZE0Xcl2hvgv4wcb/LfuCweFnDVjVEppqOiTpK86KCtYTrf7iCcz6Jy+qTYZJO0EWa/OY2X6rclU1MdYSgPGw==
+  resolved "git+ssh://git@github.com/itargaryen/simple-uploader.git#79d795ca1ce0b163c0e335fddad5bf9393004780"
   dependencies:
     jquery "=3.1.1"
     simple-module "github:itargaryen/simple-module#v2.1.0"
