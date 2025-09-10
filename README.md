@@ -65,15 +65,12 @@ Modern browsers and Internet Explorer 10+.
 
 คำสั่งต่างๆ ที่ใช้บ่อย
 
-# 1) หยุดสแต็กเดิมถ้ายังมี
 cd ~/OnlineJudgeDeploy 2>/dev/null && docker compose down -v || true
 
-# 2) ลบคอนเทนเนอร์/อิมเมจ/เน็ตเวิร์ก/วอลุ่มที่ค้างทั้งหมด
 docker rm -f $(docker ps -aq) 2>/dev/null || true
 docker system prune -af --volumes
 docker builder prune -af
 
-# 3) ลบโฟลเดอร์ซอร์ส + ดาต้าที่เคยสร้าง
 cd ~
 sudo rm -rf ~/OnlineJudgeDeploy ~/OnlineJudge
 
@@ -86,12 +83,6 @@ docker compose build --pull --no-cache oj-backend
 docker compose up -d
 docker compose ps
 
-docker compose exec oj-backend python manage.py makemigrations account --name add_groups
-docker compose exec oj-backend python manage.py migrate
-
-docker compose exec oj-backend python manage.py makemigrations problem --name add_problem_groups
-docker compose exec oj-backend python manage.py migrate
-
 git status
 
 git reset --hard ssh
@@ -101,6 +92,4 @@ git push origin master --force
 git log --oneline
 
 set NODE_OPTIONS=--openssl-legacy-provider
-
-set TARGET=http://18.141.57.26/
 
