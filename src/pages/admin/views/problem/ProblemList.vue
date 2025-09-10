@@ -26,7 +26,7 @@
             </el-button>
           </div>
 
-          <!-- ช่องค้นหาแบบต้นฉบับ (พิมพ์แล้วคิวรีใหม่ผ่าน watcher) -->
+          <!-- ช่องค้นหาแบบต้นฉบับ -->
           <div class="search-section" :class="{ 'with-buttons': selectedProblemIDs.length || selectAllAcross }">
             <el-input
               v-model="keyword"
@@ -286,8 +286,8 @@ export default {
 
       // select-all-across
       selectAllAcross: false,
-      selectionFilter: null,   // snapshot ของตัวกรองตอนกด "Select all results"
-      collecting: false,       // กำลังรวบรวมไอดีทุกหน้า
+      selectionFilter: null,
+      collecting: false,
       deleteInProgress: false
     }
   },
@@ -373,9 +373,9 @@ export default {
           let offset = 0
           while (offset < this.total) {
             const res = await api.getProblemList(offset, limit, this.selectionFilter.keyword, '')
-            const rows = (res && res.data && res.data.data && res.data.data.results) || []   // <-- แทนที่ ?. ด้วยการเช็คแบบเดิม
+            const rows = (res && res.data && res.data.data && res.data.data.results) || []
             if (!rows.length) break
-            ids.push(...rows.map(r => r.id))
+            ids.push.apply(ids, rows.map(function (r) { return r.id }))
             offset += rows.length
           }
         } else {
@@ -383,9 +383,9 @@ export default {
           const pages = Math.ceil(this.total / per)
           for (let page = 1; page <= pages; page++) {
             const res = await api.getContestProblemList(this.selectionFilter.contestId, page, per)
-            const rows = (res && res.data && res.data.data && res.data.data.results) || []   // <-- แทนที่ ?. ด้วยการเช็คแบบเดิม
+            const rows = (res && res.data && res.data.data && res.data.data.results) || []
             if (!rows.length) break
-            ids.push(...rows.map(r => r.id))
+            ids.push.apply(ids, rows.map(function (r) { return r.id }))
           }
         }
       } finally {
@@ -394,9 +394,8 @@ export default {
       return ids
     },
 
-    // กดลบ (ถ้าอยู่ในโหมด select-all-across จะลบทั้งผลลัพธ์ทุกหน้า)
+    // ===== ลบข้ามหน้า =====
     async handleDeleteClick () {
-      // เผื่อผู้ใช้ยังไม่ได้กด "Select all ... results" แต่ติ๊กครบทั้งหน้า
       if (!this.selectAllAcross &&
           this.selectedProblemIDs.length === this.problemList.length &&
           this.total > this.problemList.length) {
@@ -406,10 +405,7 @@ export default {
             'Delete Problems',
             { type: 'warning' }
           )
-        } catch (e) {
-          return // ผู้ใช้กดยกเลิก
-        }
-        // เปิดโหมดข้ามหน้าแล้วไปต่อเหมือนลบทั้งหมด
+        } catch (e) { return }
         this.selectAllAcrossResults()
       }
 
@@ -436,8 +432,8 @@ export default {
               await api.deleteProblem(chunk.join(','))
             }
           } else {
-            for (const id of allIds) {
-              await api.deleteContestProblem(id)
+            for (let i = 0; i < allIds.length; i++) {
+              await api.deleteContestProblem(allIds[i])
             }
           }
           this.$success(`Deleted ${allIds.length} item(s).`)
@@ -449,7 +445,6 @@ export default {
         return
       }
 
-      // ไม่ได้เลือกแบบ across => ลบเฉพาะที่เลือกในหน้านี้
       this.deleteProblems(this.selectedProblemIDs)
     },
 
@@ -467,7 +462,6 @@ export default {
         if (this.routeName === 'problem-list') {
           return api.deleteProblem(list.join(','))
         } else {
-          // contest: ลบทีละ id
           return list.reduce(
             (p, id) => p.then(() => api.deleteContestProblem(id)),
             Promise.resolve()
@@ -480,6 +474,108 @@ export default {
         this.getProblemList(nextPage)
       })
       .catch(() => {})
+    },
+
+    // ===== Group ข้ามหน้า =====
+    async confirmGroup () {
+      const group_name = (this.groupForm.name || this.groupForm.selected || '').trim()
+      if (!group_name) return this.$error('Please select or input a group name')
+
+      let ids = []
+      if (this.selectAllAcross) {
+        try {
+          await this.$confirm(
+            `Add ALL ${this.total} result(s) to group "${group_name}"?`,
+            'Confirm',
+            { type: 'warning' }
+          )
+        } catch (e) { return }
+        ids = await this.fetchAllMatchingProblemIds()
+      } else {
+        ids = this.selectedProblemIDs
+        if (!ids.length) return this.$error('Please select at least 1 problem')
+      }
+
+      this.groupSubmitting = true
+      try {
+        const chunkSize = 300
+        for (let i = 0; i < ids.length; i += chunkSize) {
+          const batch = ids.slice(i, i + chunkSize)
+          await api.assignProblemsToGroup({ problem_ids: batch, group_name })
+        }
+        this.$success('Saved')
+        this.clearSelection()
+        this.getProblemList(this.currentPage)
+        await this.loadGroups()
+        this.showGroupDialog = false
+      } finally {
+        this.groupSubmitting = false
+      }
+    },
+
+    async removeFromGroup () {
+      const group_name = (this.groupForm.selected || '').trim()
+      if (!group_name) return this.$error('Please select a group to remove')
+
+      let ids = []
+      if (this.selectAllAcross) {
+        try {
+          await this.$confirm(
+            `Remove ALL ${this.total} result(s) from group "${group_name}" ?`,
+            'Confirm',
+            { type: 'warning' }
+          )
+        } catch (e) { return }
+        ids = await this.fetchAllMatchingProblemIds()
+      } else {
+        ids = this.selectedProblemIDs
+        if (!ids.length) return this.$error('Please select at least 1 problem')
+      }
+
+      this.removeSubmitting = true
+      try {
+        const chunkSize = 300
+        for (let i = 0; i < ids.length; i += chunkSize) {
+          const batch = ids.slice(i, i + chunkSize)
+          await api.removeProblemsFromGroup({ problem_ids: batch, group_name })
+        }
+        this.$success('Removed from group')
+        this.clearSelection()
+        this.getProblemList(this.currentPage)
+      } finally {
+        this.removeSubmitting = false
+      }
+    },
+
+    async clearAllGroups () {
+      let ids = []
+      if (this.selectAllAcross) {
+        try {
+          await this.$confirm(
+            `Remove ALL ${this.total} result(s) from ALL groups?`,
+            'Confirm',
+            { type: 'warning' }
+          )
+        } catch (e) { return }
+        ids = await this.fetchAllMatchingProblemIds()
+      } else {
+        ids = this.selectedProblemIDs
+        if (!ids.length) return this.$error('Please select at least 1 problem')
+      }
+
+      this.clearAllSubmitting = true
+      try {
+        const chunkSize = 300
+        for (let i = 0; i < ids.length; i += chunkSize) {
+          const batch = ids.slice(i, i + chunkSize)
+          await api.clearProblemsGroups({ problem_ids: batch })
+        }
+        this.$success('Cleared all groups')
+        this.clearSelection()
+        this.getProblemList(this.currentPage)
+      } finally {
+        this.clearAllSubmitting = false
+      }
     },
 
     makeContestProblemPublic (problemID) {
@@ -528,63 +624,9 @@ export default {
     },
 
     loadGroups () {
-      api.getGroupList()
+      return api.getGroupList()
         .then(res => { this.availableGroups = res.data.data || [] })
         .catch(() => { this.availableGroups = [] })
-    },
-
-    confirmGroup () {
-      const problem_ids = this.selectedProblemIDs
-      const group_name = (this.groupForm.name || this.groupForm.selected || '').trim()
-      if (!problem_ids.length) return this.$error('Please select at least 1 problem')
-      if (!group_name) return this.$error('Please select or input a group name')
-
-      this.groupSubmitting = true
-      api.assignProblemsToGroup({ problem_ids, group_name })
-        .then(() => {
-          this.getProblemList(this.currentPage)
-          return this.loadGroups()
-        })
-        .then(() => { this.showGroupDialog = false })
-        .finally(() => { this.groupSubmitting = false })
-    },
-
-    async removeFromGroup () {
-      const problem_ids = this.selectedProblemIDs
-      const group_name = (this.groupForm.selected || '').trim()
-      if (!problem_ids.length) return this.$error('Please select at least 1 problem')
-      if (!group_name) return this.$error('Please select a group to remove')
-
-      try {
-        await this.$confirm(`Remove ${problem_ids.length} problem(s) from group "${group_name}" ?`, 'Confirm', { type: 'warning' })
-      } catch (e) { return }
-
-      this.removeSubmitting = true
-      try {
-        await api.removeProblemsFromGroup({ problem_ids, group_name })
-        this.$success('Removed from group')
-        this.getProblemList(this.currentPage)
-      } finally {
-        this.removeSubmitting = false
-      }
-    },
-
-    async clearAllGroups () {
-      const problem_ids = this.selectedProblemIDs
-      if (!problem_ids.length) return this.$error('Please select at least 1 problem')
-
-      try {
-        await this.$confirm(`Remove ${problem_ids.length} problem(s) from ALL groups?`, 'Confirm', { type: 'warning' })
-      } catch (e) { return }
-
-      this.clearAllSubmitting = true
-      try {
-        await api.clearProblemsGroups({ problem_ids })
-        this.$success('Cleared all groups')
-        this.getProblemList(this.currentPage)
-      } finally {
-        this.clearAllSubmitting = false
-      }
     }
   },
   computed: {
@@ -596,13 +638,10 @@ export default {
     '$route' (newVal) {
       this.contestId = newVal.params.contestId
       this.routeName = newVal.name
-      // reset selection across เมื่อเปลี่ยน route
       this.clearSelection()
       this.getProblemList(1)
     },
-    // แบบต้นฉบับ: พิมพ์แล้วรีเฟรชทันที
     keyword () {
-      // ถ้าแก้ keyword ใหม่ ต้องตัดโหมด select-all-across ทิ้งเพื่อกันพลาด
       if (this.selectAllAcross) this.clearSelection()
       this.currentChange(1)
     }
