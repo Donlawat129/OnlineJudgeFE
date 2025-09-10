@@ -3,7 +3,6 @@
     <Panel :title="contestId ? $i18n.t('m.Contest_Problem_List') : $i18n.t('m.Problem_List')">
       <div slot="header">
         <div class="header-container">
-          <!-- ปุ่มกลุ่ม/ลบ (โชว์เมื่อเลือกอย่างน้อย 1 รายการ หรือโหมดเลือกทั้งผลลัพธ์) -->
           <div class="bulk-actions-section" v-show="selectedProblemIDs.length || selectAllAcross">
             <el-button
               type="primary"
@@ -11,9 +10,8 @@
               size="small"
               class="action-button"
               @click="openGroupDialog"
-            >
-              Group
-            </el-button>
+              :loading="groupAllInProgress"
+            >Group</el-button>
             <el-button
               type="warning"
               icon="el-icon-fa-trash"
@@ -21,26 +19,15 @@
               class="action-button"
               :loading="deleteInProgress"
               @click="handleDeleteClick"
-            >
-              Delete
-            </el-button>
+            >Delete</el-button>
           </div>
 
-          <!-- ช่องค้นหาแบบต้นฉบับ -->
           <div class="search-section" :class="{ 'with-buttons': selectedProblemIDs.length || selectAllAcross }">
-            <el-input
-              v-model="keyword"
-              prefix-icon="el-icon-search"
-              placeholder="Keywords">
-            </el-input>
+            <el-input v-model="keyword" prefix-icon="el-icon-search" placeholder="Keywords" />
           </div>
         </div>
 
-        <!-- แถบแจ้งเตือน selection ข้ามหน้า -->
-        <div
-          v-if="(selectedProblemIDs.length && total) || selectAllAcross"
-          class="selection-info"
-        >
+        <div v-if="(selectedProblemIDs.length && total) || selectAllAcross" class="selection-info">
           <template v-if="!selectAllAcross">
             Selected {{ selectedProblemIDs.length }} on this page.
             <el-link
@@ -48,14 +35,12 @@
               type="primary"
               :disabled="collecting"
               @click="selectAllAcrossResults"
-            >
-              Select all {{ total }} results
-            </el-link>
+            >Select all {{ total }} results</el-link>
           </template>
           <template v-else>
             All {{ total }} results are selected.
           </template>
-          <el-link type="danger" @click="clearSelection" :disabled="collecting">Clear</el-link>
+          <el-link type="danger" :disabled="collecting" @click="clearSelection">Clear</el-link>
         </div>
       </div>
 
@@ -69,48 +54,31 @@
         style="width: 100%"
       >
         <el-table-column type="selection" width="55"></el-table-column>
-
         <el-table-column width="100" prop="id" label="ID"></el-table-column>
 
         <el-table-column width="150" label="Display ID">
           <template slot-scope="{row}">
             <span v-show="!row.isEditing">{{row._id}}</span>
-            <el-input
-              v-show="row.isEditing"
-              v-model="row._id"
-              @keyup.enter.native="handleInlineEdit(row)">
-            </el-input>
+            <el-input v-show="row.isEditing" v-model="row._id" @keyup.enter.native="handleInlineEdit(row)" />
           </template>
         </el-table-column>
 
         <el-table-column prop="title" label="Title">
           <template slot-scope="{row}">
             <span v-show="!row.isEditing">{{row.title}}</span>
-            <el-input
-              v-show="row.isEditing"
-              v-model="row.title"
-              @keyup.enter.native="handleInlineEdit(row)">
-            </el-input>
+            <el-input v-show="row.isEditing" v-model="row.title" @keyup.enter.native="handleInlineEdit(row)" />
           </template>
         </el-table-column>
 
-        <el-table-column prop="created_by.username" label="Author"></el-table-column>
-
+        <el-table-column prop="created_by.username" label="Author" />
         <el-table-column width="200" prop="create_time" label="Create Time">
-          <template slot-scope="scope">
-            {{ scope.row.create_time | localtime }}
-          </template>
+          <template slot-scope="scope">{{ scope.row.create_time | localtime }}</template>
         </el-table-column>
 
         <el-table-column label="Group">
           <template slot-scope="scope">
             <template v-if="scope.row.groups && scope.row.groups.length">
-              <el-tag
-                v-for="(g,i) in scope.row.groups"
-                :key="g+i"
-                size="mini"
-                style="margin-right:4px"
-              >{{ g }}</el-tag>
+              <el-tag v-for="(g,i) in scope.row.groups" :key="g+i" size="mini" style="margin-right:4px">{{ g }}</el-tag>
             </template>
             <span v-else>—</span>
           </template>
@@ -118,72 +86,28 @@
 
         <el-table-column width="100" prop="visible" label="Visible">
           <template slot-scope="scope">
-            <el-switch
-              v-model="scope.row.visible"
-              active-text=""
-              inactive-text=""
-              @change="updateProblem(scope.row)">
-            </el-switch>
+            <el-switch v-model="scope.row.visible" active-text="" inactive-text="" @change="updateProblem(scope.row)" />
           </template>
         </el-table-column>
 
         <el-table-column fixed="right" label="Operation" width="250">
           <div slot-scope="scope">
             <icon-btn name="Edit" icon="edit" @click.native="goEdit(scope.row.id)"></icon-btn>
-            <icon-btn
-              v-if="contestId"
-              name="Make Public"
-              icon="clone"
-              @click.native="makeContestProblemPublic(scope.row.id)">
-            </icon-btn>
-            <icon-btn
-              icon="download"
-              name="Download TestCase"
-              @click.native="downloadTestCase(scope.row.id)">
-            </icon-btn>
-            <icon-btn
-              icon="trash"
-              name="Delete Problem"
-              @click.native="deleteProblems([scope.row.id])">
-            </icon-btn>
+            <icon-btn v-if="contestId" name="Make Public" icon="clone" @click.native="makeContestProblemPublic(scope.row.id)"></icon-btn>
+            <icon-btn icon="download" name="Download TestCase" @click.native="downloadTestCase(scope.row.id)"></icon-btn>
+            <icon-btn icon="trash" name="Delete Problem" @click.native="deleteProblems([scope.row.id])"></icon-btn>
           </div>
         </el-table-column>
       </el-table>
 
       <div class="panel-options">
-        <el-button
-          type="primary"
-          size="small"
-          icon="el-icon-plus"
-          @click="goCreateProblem">
-          Create
-        </el-button>
-
-        <el-button
-          v-if="contestId"
-          type="primary"
-          size="small"
-          icon="el-icon-plus"
-          @click="addProblemDialogVisible = true">
-          Add From Public Problem
-        </el-button>
-
-        <el-pagination
-          class="page"
-          layout="prev, pager, next"
-          :page-size="pageSize"
-          :total="total"
-          @current-change="currentChange">
-        </el-pagination>
+        <el-button type="primary" size="small" icon="el-icon-plus" @click="goCreateProblem">Create</el-button>
+        <el-button v-if="contestId" type="primary" size="small" icon="el-icon-plus" @click="addProblemDialogVisible = true">Add From Public Problem</el-button>
+        <el-pagination class="page" layout="prev, pager, next" :page-size="pageSize" :total="total" @current-change="currentChange"/>
       </div>
     </Panel>
 
-    <el-dialog
-      title="Sure to update the problem? "
-      width="20%"
-      :visible.sync="InlineEditDialogVisible"
-      @close-on-click-modal="false"
-    >
+    <el-dialog title="Sure to update the problem? " width="20%" :visible.sync="InlineEditDialogVisible" @close-on-click-modal="false">
       <div>
         <p>DisplayID: {{ currentRow._id }}</p>
         <p>Title: {{ currentRow.title }}</p>
@@ -194,30 +118,16 @@
       </span>
     </el-dialog>
 
-    <el-dialog
-      v-if="contestId"
-      title="Add Contest Problem"
-      width="80%"
-      :visible.sync="addProblemDialogVisible"
-      @close-on-click-modal="false">
+    <el-dialog v-if="contestId" title="Add Contest Problem" width="80%" :visible.sync="addProblemDialogVisible" @close-on-click-modal="false">
       <add-problem-component :contestID="contestId" @on-change="getProblemList" />
     </el-dialog>
 
     <!-- Group dialog -->
-    <el-dialog
-      title="Group selected problems"
-      :visible.sync="showGroupDialog"
-      :close-on-click-modal="false"
-      width="480px"
-    >
+    <el-dialog title="Group selected problems" :visible.sync="showGroupDialog" :close-on-click-modal="false" width="480px">
       <el-form :model="groupForm" label-position="top">
         <el-form-item label="Choose existing group">
           <el-select v-model="groupForm.selected" placeholder="Select a group" filterable clearable>
-            <el-option
-              v-for="g in availableGroups"
-              :key="g.id || g.name"
-              :label="g.name"
-              :value="g.name" />
+            <el-option v-for="g in availableGroups" :key="g.id || g.name" :label="g.name" :value="g.name" />
           </el-select>
         </el-form-item>
 
@@ -229,24 +139,13 @@
       </el-form>
 
       <div class="right">
-        <el-button
-          type="text"
-          :loading="clearAllSubmitting"
-          @click="clearAllGroups">
-          Clear all groups
-        </el-button>
+        <el-button type="text" :loading="clearAllSubmitting" @click="clearAllGroups">Clear all groups</el-button>
       </div>
 
       <span slot="footer" class="dialog-footer">
         <cancel @click.native="showGroupDialog = false">Cancel</cancel>
-        <el-button
-          type="danger"
-          :disabled="!groupForm.selected"
-          :loading="removeSubmitting"
-          @click="removeFromGroup">
-          Remove from group
-        </el-button>
-        <save @click.native="confirmGroup" :loading="groupSubmitting">Save</save>
+        <el-button type="danger" :disabled="!groupForm.selected" :loading="removeSubmitting" @click="removeFromGroup">Remove from group</el-button>
+        <save @click.native="confirmGroup" :loading="groupSubmitting || groupAllInProgress">Save</save>
       </span>
     </el-dialog>
   </div>
@@ -275,7 +174,7 @@ export default {
       InlineEditDialogVisible: false,
       addProblemDialogVisible: false,
 
-      // group
+      // group (page selection)
       selectedProblems: [],
       showGroupDialog: false,
       groupSubmitting: false,
@@ -284,11 +183,12 @@ export default {
       removeSubmitting: false,
       clearAllSubmitting: false,
 
-      // select-all-across
+      // across
       selectAllAcross: false,
       selectionFilter: null,
       collecting: false,
-      deleteInProgress: false
+      deleteInProgress: false,
+      groupAllInProgress: false
     }
   },
   mounted () {
@@ -297,11 +197,8 @@ export default {
     this.getProblemList(this.currentPage)
   },
   methods: {
-    handleDblclick (row) {
-      row.isEditing = true
-    },
+    handleDblclick (row) { row.isEditing = true },
 
-    // โหลดรายการ
     getProblemList (page = 1) {
       this.loading = true
       const isNormal = this.routeName === 'problem-list'
@@ -313,6 +210,8 @@ export default {
             this.total = res.data.data.total
             this.problemList = res.data.data.results.map(p => ({ ...p, isEditing: false }))
             this.currentPage = page
+            this.selectedProblems = []
+            this.$refs.table && this.$refs.table.clearSelection()
           })
           .finally(() => { this.loading = false })
       } else {
@@ -321,12 +220,13 @@ export default {
             this.total = res.data.data.total
             this.problemList = res.data.data.results.map(p => ({ ...p, isEditing: false }))
             this.currentPage = page
+            this.selectedProblems = []
+            this.$refs.table && this.$refs.table.clearSelection()
           })
           .finally(() => { this.loading = false })
       }
     },
 
-    // เปลี่ยนหน้า
     currentChange (page) {
       this.currentPage = page
       this.getProblemList(page)
@@ -348,14 +248,10 @@ export default {
       }
     },
 
-    // ===== Select-all across pages =====
+    // across
     selectAllAcrossResults () {
       this.selectAllAcross = true
-      this.selectionFilter = {
-        keyword: this.keyword,
-        routeName: this.routeName,
-        contestId: this.contestId
-      }
+      this.selectionFilter = { keyword: this.keyword, routeName: this.routeName, contestId: this.contestId }
     },
     clearSelection () {
       this.selectAllAcross = false
@@ -375,7 +271,7 @@ export default {
             const res = await api.getProblemList(offset, limit, this.selectionFilter.keyword, '')
             const rows = (res && res.data && res.data.data && res.data.data.results) || []
             if (!rows.length) break
-            ids.push.apply(ids, rows.map(function (r) { return r.id }))
+            ids.push(...rows.map(r => r.id))
             offset += rows.length
           }
         } else {
@@ -385,7 +281,7 @@ export default {
             const res = await api.getContestProblemList(this.selectionFilter.contestId, page, per)
             const rows = (res && res.data && res.data.data && res.data.data.results) || []
             if (!rows.length) break
-            ids.push.apply(ids, rows.map(function (r) { return r.id }))
+            ids.push(...rows.map(r => r.id))
           }
         }
       } finally {
@@ -394,47 +290,20 @@ export default {
       return ids
     },
 
-    // ===== ลบข้ามหน้า =====
+    // delete
     async handleDeleteClick () {
-      if (!this.selectAllAcross &&
-          this.selectedProblemIDs.length === this.problemList.length &&
-          this.total > this.problemList.length) {
-        try {
-          await this.$confirm(
-            `You selected all ${this.problemList.length} items on this page. Delete ALL ${this.total} results matching this search?`,
-            'Delete Problems',
-            { type: 'warning' }
-          )
-        } catch (e) { return }
-        this.selectAllAcrossResults()
-      }
-
       if (this.selectAllAcross) {
         try {
-          await this.$confirm(
-            `Delete ALL ${this.total} result(s)? The associated submissions will be deleted as well.`,
-            'Delete Problems',
-            { type: 'warning' }
-          )
+          await this.$confirm(`Delete ALL ${this.total} result(s)? The associated submissions will be deleted as well.`, 'Delete Problems', { type: 'warning' })
         } catch (e) { return }
 
         this.deleteInProgress = true
         try {
           const allIds = await this.fetchAllMatchingProblemIds()
-          if (!allIds.length) {
-            this.$warning('No result to delete.')
-            return
-          }
-          if (this.selectionFilter.routeName === 'problem-list') {
-            const chunkSize = 200
-            for (let i = 0; i < allIds.length; i += chunkSize) {
-              const chunk = allIds.slice(i, i + chunkSize)
-              await api.deleteProblem(chunk.join(','))
-            }
-          } else {
-            for (let i = 0; i < allIds.length; i++) {
-              await api.deleteContestProblem(allIds[i])
-            }
+          if (!allIds.length) { this.$warning('No result to delete.'); return }
+          const chunkSize = 200
+          for (let i = 0; i < allIds.length; i += chunkSize) {
+            await api.deleteProblem(allIds.slice(i, i + chunkSize).join(','))
           }
           this.$success(`Deleted ${allIds.length} item(s).`)
           this.clearSelection()
@@ -445,137 +314,30 @@ export default {
         return
       }
 
-      this.deleteProblems(this.selectedProblemIDs)
+      // ลบเฉพาะในหน้านี้
+      const ids = this.selectedProblemIDs
+      if (!ids.length) return this.$error('Please select at least 1 problem')
+      this.deleteProblems(ids)
     },
 
-    // ลบเดี่ยว/หลายรายการแบบเดิม
     deleteProblems (ids) {
       const list = Array.isArray(ids) ? ids : (ids ? String(ids).split(',') : [])
       if (!list.length) return this.$error('Please select at least 1 problem')
 
       this.$confirm(
         'Sure to delete the selected problem(s)? The associated submissions will be deleted as well.',
-        'Delete Problem',
-        { type: 'warning' }
-      )
-      .then(() => {
+        'Delete Problem', { type: 'warning' }
+      ).then(() => {
         if (this.routeName === 'problem-list') {
           return api.deleteProblem(list.join(','))
         } else {
-          return list.reduce(
-            (p, id) => p.then(() => api.deleteContestProblem(id)),
-            Promise.resolve()
-          )
+          return list.reduce((p, id) => p.then(() => api.deleteContestProblem(id)), Promise.resolve())
         }
-      })
-      .then(() => {
+      }).then(() => {
         const nextPage = Math.max(1, this.currentPage - (list.length >= this.problemList.length ? 1 : 0))
         this.clearSelection()
         this.getProblemList(nextPage)
-      })
-      .catch(() => {})
-    },
-
-    // ===== Group ข้ามหน้า =====
-    async confirmGroup () {
-      const group_name = (this.groupForm.name || this.groupForm.selected || '').trim()
-      if (!group_name) return this.$error('Please select or input a group name')
-
-      let ids = []
-      if (this.selectAllAcross) {
-        try {
-          await this.$confirm(
-            `Add ALL ${this.total} result(s) to group "${group_name}"?`,
-            'Confirm',
-            { type: 'warning' }
-          )
-        } catch (e) { return }
-        ids = await this.fetchAllMatchingProblemIds()
-      } else {
-        ids = this.selectedProblemIDs
-        if (!ids.length) return this.$error('Please select at least 1 problem')
-      }
-
-      this.groupSubmitting = true
-      try {
-        const chunkSize = 300
-        for (let i = 0; i < ids.length; i += chunkSize) {
-          const batch = ids.slice(i, i + chunkSize)
-          await api.assignProblemsToGroup({ problem_ids: batch, group_name })
-        }
-        this.$success('Saved')
-        this.clearSelection()
-        this.getProblemList(this.currentPage)
-        await this.loadGroups()
-        this.showGroupDialog = false
-      } finally {
-        this.groupSubmitting = false
-      }
-    },
-
-    async removeFromGroup () {
-      const group_name = (this.groupForm.selected || '').trim()
-      if (!group_name) return this.$error('Please select a group to remove')
-
-      let ids = []
-      if (this.selectAllAcross) {
-        try {
-          await this.$confirm(
-            `Remove ALL ${this.total} result(s) from group "${group_name}" ?`,
-            'Confirm',
-            { type: 'warning' }
-          )
-        } catch (e) { return }
-        ids = await this.fetchAllMatchingProblemIds()
-      } else {
-        ids = this.selectedProblemIDs
-        if (!ids.length) return this.$error('Please select at least 1 problem')
-      }
-
-      this.removeSubmitting = true
-      try {
-        const chunkSize = 300
-        for (let i = 0; i < ids.length; i += chunkSize) {
-          const batch = ids.slice(i, i + chunkSize)
-          await api.removeProblemsFromGroup({ problem_ids: batch, group_name })
-        }
-        this.$success('Removed from group')
-        this.clearSelection()
-        this.getProblemList(this.currentPage)
-      } finally {
-        this.removeSubmitting = false
-      }
-    },
-
-    async clearAllGroups () {
-      let ids = []
-      if (this.selectAllAcross) {
-        try {
-          await this.$confirm(
-            `Remove ALL ${this.total} result(s) from ALL groups?`,
-            'Confirm',
-            { type: 'warning' }
-          )
-        } catch (e) { return }
-        ids = await this.fetchAllMatchingProblemIds()
-      } else {
-        ids = this.selectedProblemIDs
-        if (!ids.length) return this.$error('Please select at least 1 problem')
-      }
-
-      this.clearAllSubmitting = true
-      try {
-        const chunkSize = 300
-        for (let i = 0; i < ids.length; i += chunkSize) {
-          const batch = ids.slice(i, i + chunkSize)
-          await api.clearProblemsGroups({ problem_ids: batch })
-        }
-        this.$success('Cleared all groups')
-        this.clearSelection()
-        this.getProblemList(this.currentPage)
-      } finally {
-        this.clearAllSubmitting = false
-      }
+      }).catch(() => {})
     },
 
     makeContestProblemPublic (problemID) {
@@ -588,13 +350,10 @@ export default {
       const data = { ...row }
       const funcName = this.contestId ? 'editContestProblem' : 'editProblem'
       if (this.contestId) data.contest_id = this.contestId
-
-      api[funcName](data)
-        .then(() => {
-          this.InlineEditDialogVisible = false
-          this.getProblemList(this.currentPage)
-        })
-        .catch(() => { this.InlineEditDialogVisible = false })
+      api[funcName](data).then(() => {
+        this.InlineEditDialogVisible = false
+        this.getProblemList(this.currentPage)
+      }).catch(() => { this.InlineEditDialogVisible = false })
     },
 
     handleInlineEdit (row) {
@@ -607,32 +366,87 @@ export default {
       utils.downloadFile(url)
     },
 
-    getPublicProblem () {
-      api.getProblemList()
-    },
+    getPublicProblem () { api.getProblemList() },
 
     // selection
-    handleSelectionChange (val) {
-      this.selectedProblems = val
-    },
+    handleSelectionChange (val) { this.selectedProblems = val },
 
-    // group dialog
+    // group (dialog)
     openGroupDialog () {
+      if (!this.selectedProblemIDs.length && !this.selectAllAcross) return this.$error('Please select at least 1 problem')
       this.groupForm = { selected: '', name: '' }
       this.showGroupDialog = true
       this.loadGroups()
     },
-
     loadGroups () {
-      return api.getGroupList()
-        .then(res => { this.availableGroups = res.data.data || [] })
-        .catch(() => { this.availableGroups = [] })
+      api.getGroupList().then(res => {
+        this.availableGroups = res.data.data || []
+      }).catch(() => { this.availableGroups = [] })
+    },
+    async confirmGroup () {
+      const group_name = (this.groupForm.name || this.groupForm.selected || '').trim()
+      if (!group_name) return this.$error('Please select or input a group name')
+
+      let problem_ids = this.selectedProblemIDs.slice()
+      if (this.selectAllAcross) {
+        this.groupAllInProgress = true
+        problem_ids = await this.fetchAllMatchingProblemIds()
+        this.groupAllInProgress = false
+      }
+      if (!problem_ids.length) return this.$error('No problem selected')
+
+      this.groupSubmitting = true
+      api.assignProblemsToGroup({ problem_ids, group_name })
+        .then(() => { this.getProblemList(this.currentPage); return this.loadGroups() })
+        .then(() => { this.showGroupDialog = false })
+        .finally(() => { this.groupSubmitting = false })
+    },
+    async removeFromGroup () {
+      const group_name = (this.groupForm.selected || '').trim()
+      if (!group_name) return this.$error('Please select a group to remove')
+
+      let problem_ids = this.selectedProblemIDs.slice()
+      if (!problem_ids.length && !this.selectAllAcross) return this.$error('Please select at least 1 problem')
+
+      if (this.selectAllAcross) {
+        try { await this.$confirm(`Remove ALL ${this.total} results from group "${group_name}" ?`, 'Confirm', { type: 'warning' }) } catch (e) { return }
+        this.groupAllInProgress = true
+        problem_ids = await this.fetchAllMatchingProblemIds()
+        this.groupAllInProgress = false
+      }
+
+      this.removeSubmitting = true
+      try {
+        await api.removeProblemsFromGroup({ problem_ids, group_name })
+        this.$success('Removed from group')
+        this.getProblemList(this.currentPage)
+      } finally {
+        this.removeSubmitting = false
+      }
+    },
+    async clearAllGroups () {
+      let problem_ids = this.selectedProblemIDs.slice()
+      if (!problem_ids.length && !this.selectAllAcross) return this.$error('Please select at least 1 problem')
+
+      if (this.selectAllAcross) {
+        try { await this.$confirm(`Remove ALL ${this.total} results from ALL groups?`, 'Confirm', { type: 'warning' }) } catch (e) { return }
+        this.groupAllInProgress = true
+        problem_ids = await this.fetchAllMatchingProblemIds()
+        this.groupAllInProgress = false
+      }
+
+      this.clearAllSubmitting = true
+      try {
+        await api.clearProblemsGroups({ problem_ids })
+        this.$success('Cleared all groups')
+        this.getProblemList(this.currentPage)
+      } finally {
+        this.clearAllSubmitting = false
+      }
     }
   },
   computed: {
-    selectedProblemIDs () {
-      return this.selectedProblems.map(p => p.id)
-    }
+    selectedProblemIDs () { return this.selectedProblems.map(p => p.id) }
   },
   watch: {
     '$route' (newVal) {
@@ -650,80 +464,16 @@ export default {
 </script>
 
 <style scoped lang="less">
-/* Container หลัก */
-.header-container {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-}
+.header-container { display: flex; align-items: center; gap: 10px; width: 100%; }
+.bulk-actions-section { display: flex; align-items: center; gap: 0px; flex-shrink: 0; }
+.search-section { flex: 1; display: flex; align-items: center; }
 
-/* ปุ่มกลุ่ม */
-.bulk-actions-section {
-  display: flex;
-  align-items: center;
-  gap: 0px;
-  flex-shrink: 0;
-}
+.action-button { box-shadow: 0 2px 4px rgba(0,0,0,.1); border-radius: 6px; transition: all .3s; height: 32px; padding: 0 12px; display: inline-flex; align-items: center; justify-content: center; }
+.action-button:hover { transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,.15); }
 
-/* ช่องค้นหา */
-.search-section {
-  flex: 1;
-  display: flex;
-  align-items: center;
-}
+.selection-info { margin-top: 8px; font-size: 12px; color: #666; display: flex; gap: 12px; align-items: center; }
 
-/* ปุ่ม */
-.action-button {
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  border-radius: 6px;
-  transition: all 0.3s ease;
-  height: 32px;
-  padding: 0 12px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-.action-button i { margin-right: 4px; }
-.action-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-}
-
-/* Banner แสดงสถานะการเลือก */
-.selection-info {
-  margin-top: 8px;
-  font-size: 12px;
-  color: #666;
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-/* สไตล์ input ให้เนียน */
-.search-section .el-input { transition: all 0.3s ease; }
-.search-section .el-input /deep/ .el-input__inner {
-  height: 32px;
-  line-height: 32px;
-  border-radius: 6px;
-}
-.search-section .el-input:focus-within {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.2);
-}
-
-/* Animation ปุ่มกลุ่ม */
-.bulk-actions-section { animation: slideInLeft 0.3s ease-out; }
-@keyframes slideInLeft {
-  from { opacity: 0; transform: translateX(-20px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .header-container { flex-direction: column; gap: 12px; }
-  .bulk-actions-section, .search-section { width: 100%; }
-  .search-section { flex: none; }
-  .bulk-actions-section { justify-content: flex-start; }
-}
+.search-section .el-input { transition: all .3s; }
+.search-section .el-input /deep/ .el-input__inner { height: 32px; line-height: 32px; border-radius: 6px; }
+.search-section .el-input:focus-within { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(64,158,255,.2); }
 </style>
