@@ -369,23 +369,21 @@ export default {
       this.collecting = true
       try {
         if (this.selectionFilter.routeName === 'problem-list') {
-          // ใช้ limit เท่ากับ page size ปัจจุบัน เพื่อให้แน่ใจว่า backend ยอมรับ
           const limit = this.pageSize || 10
           let offset = 0
           while (offset < this.total) {
             const res = await api.getProblemList(offset, limit, this.selectionFilter.keyword, '')
-            const rows = (res.data?.data?.results) || []
+            const rows = (res && res.data && res.data.data && res.data.data.results) || []   // <-- แทนที่ ?. ด้วยการเช็คแบบเดิม
             if (!rows.length) break
             ids.push(...rows.map(r => r.id))
-            offset += rows.length // ← เพิ่มตามผลลัพธ์จริง ไม่ใช่ตาม limit ที่ขอ
+            offset += rows.length
           }
         } else {
-          // contest-problem-list: เดินหน้าไปทีละ page ตามจำนวนที่ backend ส่งจริง
           const per = this.pageSize || 10
           const pages = Math.ceil(this.total / per)
           for (let page = 1; page <= pages; page++) {
             const res = await api.getContestProblemList(this.selectionFilter.contestId, page, per)
-            const rows = (res.data?.data?.results) || []
+            const rows = (res && res.data && res.data.data && res.data.data.results) || []   // <-- แทนที่ ?. ด้วยการเช็คแบบเดิม
             if (!rows.length) break
             ids.push(...rows.map(r => r.id))
           }
