@@ -350,7 +350,6 @@ export default {
 
     // ===== Select-all across pages =====
     selectAllAcrossResults () {
-      // เซ็ตโหมด "เลือกทั้งหมดทุกหน้า" และ snapshot ฟิลเตอร์ปัจจุบัน
       this.selectAllAcross = true
       this.selectionFilter = {
         keyword: this.keyword,
@@ -366,27 +365,28 @@ export default {
     },
 
     async fetchAllMatchingProblemIds () {
-      // รวบรวม id ของผลลัพธ์ทุกหน้าตามฟิลเตอร์ snapshot
       const ids = []
       this.collecting = true
       try {
         if (this.selectionFilter.routeName === 'problem-list') {
-          const limit = 1000
+          // ใช้ limit เท่ากับ page size ปัจจุบัน เพื่อให้แน่ใจว่า backend ยอมรับ
+          const limit = this.pageSize || 10
           let offset = 0
           while (offset < this.total) {
-            // ใช้ keyword จาก snapshot เพื่อกันกรณีผู้ใช้แก้ไขระหว่างทาง
             const res = await api.getProblemList(offset, limit, this.selectionFilter.keyword, '')
-            const rows = (res.data.data.results || [])
+            const rows = (res.data?.data?.results) || []
+            if (!rows.length) break
             ids.push(...rows.map(r => r.id))
-            offset += limit
+            offset += rows.length // ← เพิ่มตามผลลัพธ์จริง ไม่ใช่ตาม limit ที่ขอ
           }
         } else {
-          // contest-problem-list ใช้ page + limit
-          const per = 200
+          // contest-problem-list: เดินหน้าไปทีละ page ตามจำนวนที่ backend ส่งจริง
+          const per = this.pageSize || 10
           const pages = Math.ceil(this.total / per)
           for (let page = 1; page <= pages; page++) {
             const res = await api.getContestProblemList(this.selectionFilter.contestId, page, per)
-            const rows = (res.data.data.results || [])
+            const rows = (res.data?.data?.results) || []
+            if (!rows.length) break
             ids.push(...rows.map(r => r.id))
           }
         }
@@ -398,11 +398,27 @@ export default {
 
     // กดลบ (ถ้าอยู่ในโหมด select-all-across จะลบทั้งผลลัพธ์ทุกหน้า)
     async handleDeleteClick () {
-      if (this.selectAllAcross) {
-        // ยืนยันการลบทั้งหมด
+      // เผื่อผู้ใช้ยังไม่ได้กด "Select all ... results" แต่ติ๊กครบทั้งหน้า
+      if (!this.selectAllAcross &&
+          this.selectedProblemIDs.length === this.problemList.length &&
+          this.total > this.problemList.length) {
         try {
           await this.$confirm(
-            `Delete ALL ${this.total} result(s) matching the current search? The associated submissions will be deleted as well.`,
+            `You selected all ${this.problemList.length} items on this page. Delete ALL ${this.total} results matching this search?`,
+            'Delete Problems',
+            { type: 'warning' }
+          )
+        } catch (e) {
+          return // ผู้ใช้กดยกเลิก
+        }
+        // เปิดโหมดข้ามหน้าแล้วไปต่อเหมือนลบทั้งหมด
+        this.selectAllAcrossResults()
+      }
+
+      if (this.selectAllAcross) {
+        try {
+          await this.$confirm(
+            `Delete ALL ${this.total} result(s)? The associated submissions will be deleted as well.`,
             'Delete Problems',
             { type: 'warning' }
           )
@@ -415,24 +431,19 @@ export default {
             this.$warning('No result to delete.')
             return
           }
-
           if (this.selectionFilter.routeName === 'problem-list') {
-            // ลบทีละก้อนเพื่อลดปัญหา URL ยาวเกิน
             const chunkSize = 200
             for (let i = 0; i < allIds.length; i += chunkSize) {
               const chunk = allIds.slice(i, i + chunkSize)
               await api.deleteProblem(chunk.join(','))
             }
           } else {
-            // contest-problem-list: endpoint รองรับทีละไอดี
             for (const id of allIds) {
               await api.deleteContestProblem(id)
             }
           }
-
           this.$success(`Deleted ${allIds.length} item(s).`)
           this.clearSelection()
-          // โหลดหน้าใหม่ (เริ่มจากหน้า 1)
           this.getProblemList(1)
         } finally {
           this.deleteInProgress = false
@@ -589,7 +600,7 @@ export default {
       this.routeName = newVal.name
       // reset selection across เมื่อเปลี่ยน route
       this.clearSelection()
-      this.getProblemList(this.currentPage)
+      this.getProblemList(1)
     },
     // แบบต้นฉบับ: พิมพ์แล้วรีเฟรชทันที
     keyword () {
