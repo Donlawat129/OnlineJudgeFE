@@ -62,34 +62,3 @@ Modern browsers and Internet Explorer 10+.
 ## LICENSE
 
 [MIT](http://opensource.org/licenses/MIT)
-
-คำสั่งต่างๆ ที่ใช้บ่อย
-
-cd ~/OnlineJudgeDeploy 2>/dev/null && docker compose down -v || true
-
-docker rm -f $(docker ps -aq) 2>/dev/null || true
-docker system prune -af --volumes
-docker builder prune -af
-
-cd ~
-sudo rm -rf ~/OnlineJudgeDeploy ~/OnlineJudge
-
-cd ~
-git clone https://github.com/Donlawat129/OnlineJudgeDeploy.git
-git clone https://github.com/Donlawat129/OnlineJudge.git
-
-cd ~/OnlineJudgeDeploy
-docker compose build --pull --no-cache oj-backend
-docker compose up -d
-docker compose ps
-
-git status
-
-git reset --hard ssh
-
-git push origin master --force
-
-git log --oneline
-
-set NODE_OPTIONS=--openssl-legacy-provider
-
