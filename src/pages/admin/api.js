@@ -9,14 +9,9 @@ axios.defaults.xsrfHeaderName = 'X-CSRFToken'
 axios.defaults.xsrfCookieName = 'csrftoken'
 
 export default {
-  // 登录
+  // auth
   login (username, password) {
-    return ajax('login', 'post', {
-      data: {
-        username,
-        password
-      }
-    })
+    return ajax('login', 'post', { data: { username, password } })
   },
   logout () {
     return ajax('logout', 'get')
@@ -24,19 +19,13 @@ export default {
   getProfile () {
     return ajax('profile', 'get')
   },
+
+  // announcement
   getAnnouncementList (offset, limit, keyword) {
-    return ajax('admin/announcement', 'get', {
-      params: {
-        offset,
-        limit,
-        keyword
-      }
-    })
+    return ajax('admin/announcement', 'get', { params: { offset, limit, keyword } })
   },
   deleteAnnouncement (id) {
-    return ajax('admin/announcement', 'delete', {
-      params: { id }
-    })
+    return ajax('admin/announcement', 'delete', { params: { id } })
   },
   editAnnouncement (data) {
     return ajax('admin/announcement', 'put', { data })
@@ -44,14 +33,10 @@ export default {
   addAnnouncement (data) {
     return ajax('admin/announcement', 'post', { data })
   },
+
+  // user
   getUserList (offset, limit, keyword) {
-    return ajax('admin/user', 'get', {
-      params: {
-        offset,
-        limit,
-        keyword
-      }
-    })
+    return ajax('admin/user', 'get', { params: { offset, limit, keyword } })
   },
   getUser (id) {
     return ajax('admin/user', 'get', { params: { id } })
@@ -60,7 +45,7 @@ export default {
     return ajax('admin/user', 'put', { data })
   },
   deleteUsers (id) {
-    return ajax('admin/user', 'delete', { params: { id }})
+    return ajax('admin/user', 'delete', { params: { id } })
   },
   addUser (data) {
     return ajax('admin/user', 'post', { data })
@@ -68,6 +53,8 @@ export default {
   generateUser (data) {
     return ajax('admin/generate_user', 'post', { data })
   },
+
+  // smtp
   getSMTPConfig () {
     return ajax('admin/smtp', 'get')
   },
@@ -80,18 +67,24 @@ export default {
   testSMTPConfig (data) {
     return ajax('admin/smtp_test', 'post', { data })
   },
+
+  // website
   getWebsiteConfig () {
     return ajax('admin/website', 'get')
   },
   editWebsiteConfig (data) {
     return ajax('admin/website', 'post', { data })
   },
+
+  // judge server
   getJudgeServer () {
     return ajax('admin/judge_server', 'get')
   },
   deleteJudgeServer (hostname) {
     return ajax('admin/judge_server', 'delete', { params: { hostname } })
   },
+
+  // contest
   getContestList (offset, limit, keyword) {
     return ajax('admin/contest', 'get', { params: { offset, limit, keyword } })
   },
@@ -107,30 +100,28 @@ export default {
   deleteContest (id) {
     return ajax('admin/contest', 'delete', { params: { id } })
   },
-  // 导入用户
+
+  // import users
   importUsers (users) {
-    let data = []
-    for (let user of users) {
-      data.push({
-        username: user[0],
-        real_name: user[1],
-        email: user[2],
-        password: user[3]
-      })
-    }
+    const data = users.map(u => ({
+      username: u[0],
+      real_name: u[1],
+      email: u[2],
+      password: u[3]
+    }))
     return ajax('admin/import_user', 'post', { data: { users: data } })
   },
-  downloadTestCase (id) {
-    return ajax('admin/test_case', 'get', {
-      params: { id },
-      responseType: 'blob'
-    })
-  },
+
+  // languages
   getLanguages () {
     return ajax('languages', 'get')
   },
-  getProblemTagList (params) {
-    return ajax('problem/tags', 'get', { params })
+
+  // problem tags
+  getProblemTagList (params = {}) {
+    // เติม default เผื่อ FE ไม่ส่งมา จะดึงได้มากขึ้น
+    const finalParams = { keyword: '', offset: 0, limit: 1000, ...params }
+    return ajax('problem/tags', 'get', { params: finalParams })
   },
   addProblemTag (tag_name) {
     return ajax('problem/tags', 'post', { data: { tag_name } })
@@ -138,36 +129,39 @@ export default {
   deleteProblemTag (tag_name) {
     return ajax('problem/tags', 'delete', { params: { tag_name } })
   },
+
+  // problems (public)
   makeProblemPublic (id) {
     return ajax('admin/problem/make_public', 'post', { data: { id } })
   },
+
+  // problems (admin)
   addProblem (data) {
     return ajax('admin/problem', 'post', { data })
   },
-  // 修改problem
   editProblem (data) {
     return ajax('admin/problem', 'put', { data })
   },
   getProblem (id) {
     return ajax('admin/problem', 'get', { params: { id } })
   },
-  deleteProblem (id) {
+
+  // ✅ รวมฟังก์ชันลบปัญหา ให้เหลืออันเดียว รองรับทั้ง id เดี่ยวและหลาย id
+  deleteProblem (ids) {
+    const id = Array.isArray(ids) ? ids.join(',') : ids
     return ajax('admin/problem', 'delete', { params: { id } })
   },
+
   getProblemList (offset, limit, keyword, tag) {
-    return ajax('admin/problem', 'get', {
-      params: { offset, limit, keyword, tag }
-    })
+    return ajax('admin/problem', 'get', { params: { offset, limit, keyword, tag } })
   },
+
+  // contest problems
   getContestProblem (problem_id, contest_id) {
-    return ajax('admin/contest/problem', 'get', {
-      params: { problem_id, contest_id }
-    })
+    return ajax('admin/contest/problem', 'get', { params: { problem_id, contest_id } })
   },
   getContestProblemList (contest_id, page, limit) {
-    return ajax('admin/contest/problem', 'get', {
-      params: { contest_id, page, limit }
-    })
+    return ajax('admin/contest/problem', 'get', { params: { contest_id, page, limit } })
   },
   addContestProblem (data) {
     return ajax('admin/contest/problem', 'post', { data })
@@ -184,6 +178,8 @@ export default {
   addProblemFromPublic (data) {
     return ajax('admin/contest/add_problem_from_public', 'post', { data })
   },
+
+  // release notes / dashboard / session
   getReleaseNotes () {
     return ajax('admin/versions', 'get')
   },
@@ -193,92 +189,78 @@ export default {
   getSessions () {
     return ajax('sessions', 'get')
   },
+
+  // import/export problem
   exportProblems (data) {
-    return ajax('export_problem', 'post', {
-      data
-    })
+    return ajax('export_problem', 'post', { data })
   },
+
+  // groups
   getGroupList () {
-  return ajax('admin/groups', 'get')
+    return ajax('admin/groups', 'get')
   },
   assignUsersToGroup (data) {
-    // { user_id: [1,2], group_name: 'A1' }
+    // expects: { user_ids: [1,2], group_name: 'A1' }
     return ajax('admin/groups/assign', 'post', { data })
   },
   removeUsersFromGroup (data) {
-    // { user_id: [1,2], group_name: 'A1' }
+    // expects: { user_ids: [1,2], group_name: 'A1' }
     return ajax('admin/groups/remove', 'post', { data })
   },
   clearUsersGroups (data) {
-    // { user_id: [1,2] }
+    // expects: { user_ids: [1,2] }
     return ajax('admin/groups/clear', 'post', { data })
   },
+
   assignProblemsToGroup (data) {
-    // { problem_ids: [1,2], group_name: 'A1', replace_existing?: true }
+    // expects: { problem_ids: [1,2], group_name: 'A1', replace_existing?: true }
     return ajax('admin/problem/groups/assign', 'post', { data })
   },
   removeProblemsFromGroup (data) {
-    // { problem_ids: [1,2], group_name: 'A1' }
+    // expects: { problem_ids: [1,2], group_name: 'A1' }
     return ajax('admin/problem/groups/remove', 'post', { data })
   },
   clearProblemsGroups (data) {
-    // { problem_ids: [1,2] }
+    // expects: { problem_ids: [1,2] }
     return ajax('admin/problem/groups/clear', 'post', { data })
   },
-    // ลบหลายปัญหาในคราวเดียว (ถ้าแก้ backend ให้รับ id=1,2,3 แล้ว)
-  deleteProblem (ids) {
-    const id = Array.isArray(ids) ? ids.join(',') : ids
-    return ajax('admin/problem', 'delete', { params: { id } })
-  },
+
+  // spj
   compileSPJ (data) {
     return ajax('admin/compile_spj', 'post', { data })
-  },
-
+  }
 }
 
 /**
- * @param url
- * @param method get|post|put|delete...
- * @param params like queryString. if a url is index?a=1&b=2, params = {a: '1', b: '2'}
- * @param data post data, use for method put|post
- * @returns {Promise}
+ * ajax wrapper
  */
 function ajax (url, method, options) {
-  if (options !== undefined) {
-    var {params = {}, data = {}} = options
-  } else {
-    params = data = {}
-  }
+  let params = {}
+  let data = {}
+  if (options) ({ params = {}, data = {} } = options)
+
   return new Promise((resolve, reject) => {
-    axios({
-      url,
-      method,
-      params,
-      data
-    }).then(res => {
-      // API正常返回(status=20x), 是否错误通过有无error判断
-      if (res.data.error !== null) {
-        Vue.prototype.$error(res.data.data)
-        reject(res)
-        // // 若后端返回为登录，则为session失效，应退出当前登录用户
-        if (res.data.data.startsWith('Please login')) {
-          router.push({name: 'login'})
+    axios({ url, method, params, data }).then(res => {
+      // ✅ ถือว่าสำเร็จถ้าไม่มี error หรือ error เป็น falsy
+      const hasError = res && res.data && res.data.error
+      if (hasError) {
+        const msg = (res.data && (res.data.data || res.data.error)) || 'Request failed'
+        Vue.prototype.$error(String(msg))
+        // ถ้า message เป็น string และบอกว่าไม่ได้ล็อกอิน ค่อย redirect
+        if (typeof msg === 'string' && msg.startsWith('Please login')) {
+          router.push({ name: 'login' })
         }
+        reject(res)
       } else {
         resolve(res)
-        if (method !== 'get') {
-          Vue.prototype.$success('Succeeded')
-        }
+        if (method !== 'get') Vue.prototype.$success('Succeeded')
       }
-    }, err => {
-      // <<< ใส่ส่วนนี้แทนของเดิม
+    }).catch(err => {
       const msg =
         (err.response && err.response.data && (err.response.data.error || err.response.data.data)) ||
-        'Network error'
-      Vue.prototype.$error(msg)
+        err.message || 'Network error'
+      Vue.prototype.$error(String(msg))
       reject(err)
     })
   })
 }
-
-
