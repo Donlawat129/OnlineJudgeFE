@@ -329,17 +329,18 @@
         spjMode: '',
         disableRuleType: false,
         routeName: '',
-        allTags: [],
+        allTags: [], // เพิ่ม array สำหรับเก็บ tags ทั้งหมด
         error: {
           tags: '',
           spj: '',
           languages: '',
-          testcase: ''
+          testcase: '' // แก้ไข testCase เป็น testcase ให้ตรงกับโค้ดเดิม
         }
       }
     },
     computed: {
-      availableTags () {
+      // คำนวณ tags ที่สามารถเลือกได้ (ยังไม่ได้เลือก)
+      availableTags() {
         return this.allTags.filter(tag => !this.problem.tags.includes(tag))
       }
     },
@@ -350,10 +351,10 @@
       } else {
         this.mode = 'add'
       }
-
+      
       // โหลด tags ทั้งหมดเมื่อเริ่มต้น
       this.loadAllTags()
-
+      
       api.getLanguages().then(res => {
         this.problem = this.reProblem = {
           _id: '',
@@ -396,6 +397,7 @@
         let allLanguage = res.data.data
         this.allLanguage = allLanguage
 
+        // get problem after getting languages list to avoid find undefined value in `watch problem.languages`
         if (this.mode === 'edit') {
           this.title = this.$i18n.t('m.Edit_Problem')
           let funcName = {'edit-problem': 'getProblem', 'edit-contest-problem': 'getContestProblem'}[this.routeName]
@@ -418,11 +420,12 @@
     },
     watch: {
       '$route' () {
-        this.$refs.form && this.$refs.form.resetFields()
+        this.$refs.form.resetFields()
         this.problem = this.reProblem
       },
       'problem.languages' (newVal) {
         let data = {}
+        // use deep copy to avoid infinite loop
         let languages = JSON.parse(JSON.stringify(newVal)).sort()
         for (let item of languages) {
           if (this.template[item] === undefined) {
@@ -440,47 +443,36 @@
         }
         this.template = data
       },
-      'problem.spj_language' () {
+      'problem.spj_language' (newVal) {
         this.spjMode = this.allLanguage.spj_languages.find(item => {
           return item.name === this.problem.spj_language
         }).content_type
       }
     },
     methods: {
-      // แทนที่ loadAllTags เดิม
-      async loadAllTags () {
-        const limit = 500
-        let offset = 0
-        let acc = []
-        try {
-          while (true) {
-            const res = await api.getProblemTagList({ keyword: '', offset, limit })
-            const rows = (res && res.data && res.data.data) || []
-            if (!rows.length) break
-            acc = acc.concat(rows.map(t => t.name))
-            if (rows.length < limit) break
-            offset += rows.length
-          }
-          this.allTags = Array.from(new Set(acc))
-        } catch (e) {
+      // โหลด tags ทั้งหมดจาก API
+      loadAllTags() {
+        api.getProblemTagList({ keyword: '' }).then(res => {
+          this.allTags = res.data.data.map(tag => tag.name)
+        }).catch(() => {
           this.allTags = []
-        }
+        })
       },
-
+      
       // เลือก tag จาก available tags
-      selectAvailableTag (tag) {
+      selectAvailableTag(tag) {
         if (!this.problem.tags.includes(tag)) {
           this.problem.tags.push(tag)
         }
       },
-
+      
       // จัดการเมื่อ input blur
-      handleInputBlur () {
+      handleInputBlur() {
         if (!this.tagInput.trim()) {
           this.inputVisible = false
         }
       },
-
+      
       switchSpj () {
         if (this.testCaseUploaded) {
           this.$confirm('If you change problem judge method, you need to re-upload test cases', 'Warning', {
@@ -490,22 +482,22 @@
           }).then(() => {
             this.problem.spj = !this.problem.spj
             this.resetTestCase()
-          }).catch(() => {})
+          }).catch(() => {
+          })
         } else {
           this.problem.spj = !this.problem.spj
         }
       },
-
-      // แทนที่ querySearch เดิม
       querySearch (queryString, cb) {
-        api.getProblemTagList({ keyword: queryString, limit: 50 })
-          .then(res => {
-            const rows = (res && res.data && res.data.data) || []
-            cb(rows.map(tag => ({ value: tag.name })))
-          })
-          .catch(() => cb([]))
+        api.getProblemTagList({ keyword: queryString }).then(res => {
+          let tagList = []
+          for (let tag of res.data.data) {
+            tagList.push({value: tag.name})
+          }
+          cb(tagList)
+        }).catch(() => {
+        })
       },
-
       resetTestCase () {
         this.testCaseUploaded = false
         this.problem.test_case_score = []
@@ -515,6 +507,7 @@
         let inputValue = typeof item === 'string' ? item : (item && item.value ? item.value : this.tagInput)
         if (inputValue && !this.problem.tags.includes(inputValue)) {
           this.problem.tags.push(inputValue)
+          // เพิ่ม tag ใหม่เข้าไปใน allTags ถ้ายังไม่มี
           if (!this.allTags.includes(inputValue)) {
             this.allTags.push(inputValue)
           }
@@ -578,9 +571,10 @@
       submit () {
         if (this.problem.samples.some(sample => sample.input || sample.output)) {
           for (let sample of this.problem.samples) {
+            // ตรวจสอบว่า `input` หรือ `output` มีค่าหรือไม่
             if ((sample.input && !sample.output) || (!sample.input && sample.output)) {
-              this.$error('Both Sample input and output are required')
-              return
+              this.$error('Both Sample input and output are required');
+              return;
             }
           }
         }
@@ -632,11 +626,12 @@
           }
         }
         let funcName = {
-          'create-problem': 'addProblem',
+          'create-problem': 'addProblem',              // ← ชื่อที่มีจริงใน api.js
           'edit-problem': 'editProblem',
-          'create-contest-problem': 'addContestProblem',
+          'create-contest-problem': 'addContestProblem', // ← ชื่อที่มีจริงใน api.js
           'edit-contest-problem': 'editContestProblem'
         }[this.routeName]
+        // edit contest problem 时, contest_id会被后来的请求覆盖掉
         if (funcName === 'editContestProblem') {
           this.problem.contest_id = this.contest.id
         }
@@ -646,7 +641,8 @@
           } else {
             this.$router.push({name: 'problem-list'})
           }
-        }).catch(() => {})
+        }).catch(() => {
+        })
       }
     }
   }
@@ -678,7 +674,8 @@
         margin-bottom: 5px;
       }
     }
-
+    
+    // เพิ่ม styles สำหรับ available tags
     .available-tags-section {
       margin: 10px 0;
       padding: 10px;
@@ -686,25 +683,25 @@
       border-radius: 4px;
       border: 1px solid #e4e7ed;
     }
-
+    
     .available-tags-label {
       font-size: 12px;
       color: #606266;
       margin-bottom: 8px;
       font-weight: 500;
     }
-
+    
     .available-tags {
       display: flex;
       flex-wrap: wrap;
       gap: 5px;
     }
-
+    
     .available-tag {
       cursor: pointer;
       transition: all 0.3s;
       user-select: none;
-
+      
       &:hover {
         background-color: #409eff;
         border-color: #409eff;
@@ -712,7 +709,7 @@
         transform: translateY(-1px);
       }
     }
-
+    
     .accordion {
       margin-bottom: 10px;
     }

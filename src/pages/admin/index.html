@@ -9,19 +9,7 @@
   <link rel="shortcut icon" href="/public/website/favicon.ico">
 </head>
 <body>
-  <div id="app"></div>
-
-  <!-- ✅ socket.io v2 → v3/v4 compatibility shim -->
-  <script>
-  (function () {
-    // ถ้ามี io แต่ไม่มี .connect (เวอร์ชัน 3/4)
-    if (window.io && typeof window.io === 'function' && !window.io.connect) {
-      window.io.connect = window.io;
-      console.log('[Shim] socket.io.connect() patched for compatibility');
-    }
-  })();
-  </script>
-
-  <!-- built files will be auto injected -->
+<div id="app"></div>
+<!-- built files will be auto injected -->
 </body>
 </html>

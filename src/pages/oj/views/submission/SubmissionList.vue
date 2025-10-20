@@ -74,14 +74,20 @@
             title: this.$i18n.t('m.ID'),
             align: 'center',
             render: (h, params) => {
-              const shortId = params.row.id.slice(0, 12)
-              if (this.isAuthenticated) {
+              if (params.row.show_link) {
                 return h('span', {
-                  style: { color: '#57a3f3', cursor: 'pointer' },
-                  on: { click: () => { this.$router.push('/status/' + params.row.id) } }
-                }, shortId)
+                  style: {
+                    color: '#57a3f3',
+                    cursor: 'pointer'
+                  },
+                  on: {
+                    click: () => {
+                      this.$router.push('/status/' + params.row.id)
+                    }
+                  }
+                }, params.row.id.slice(0, 12))
               } else {
-                return h('span', shortId)
+                return h('span', params.row.id.slice(0, 12))
               }
             }
           },
